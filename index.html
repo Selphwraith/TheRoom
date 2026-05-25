@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>THE GAUNTLET</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  background:#030303;
+  font-family:'Share Tech Mono',monospace;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:100vh;overflow:hidden;user-select:none;color:#666;
+}
+#top{display:flex;align-items:baseline;gap:18px;margin-bottom:7px}
+#title{
+  font-family:'Bebas Neue',sans-serif;font-size:46px;letter-spacing:14px;
+  color:#c8c8c8;text-shadow:0 0 70px rgba(255,35,35,.18);
+}
+#sub{font-size:10px;letter-spacing:3px;color:#252525;text-transform:uppercase}
+
+#wrap{position:relative;border:1px solid #191919}
+#wrap::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:5;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.07) 2px,rgba(0,0,0,.07) 4px);
+}
+canvas{display:block}
+
+#ov{
+  position:absolute;inset:0;background:rgba(0,0,0,.92);
+  display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  z-index:20;
+}
+#ov.show{display:flex}
+#ot{font-family:'Bebas Neue',sans-serif;font-size:90px;letter-spacing:18px}
+#ot.win{color:#00ff44;text-shadow:0 0 70px #00ff44,0 0 120px rgba(0,255,68,.3)}
+#ot.lose{color:#ff2020;text-shadow:0 0 70px #ff2020,0 0 120px rgba(255,32,32,.3)}
+#om{font-size:11px;letter-spacing:3px;color:#3e3e3e;margin-top:4px}
+#ob{
+  margin-top:16px;padding:9px 34px;border:1px solid #2e2e2e;background:transparent;
+  color:#888;cursor:pointer;font-family:'Bebas Neue',sans-serif;font-size:22px;
+  letter-spacing:6px;transition:all .15s;
+}
+#ob:hover{border-color:#888;color:#ddd;background:rgba(255,255,255,.03)}
+
+#hud{
+  display:flex;gap:32px;margin-top:6px;padding:8px 18px;
+  background:#080808;border:1px solid #161616;font-size:10px;letter-spacing:1.5px;
+}
+.hu{display:flex;flex-direction:column;gap:3px}
+.hl{color:#252525;text-transform:uppercase;font-size:9px}
+.hv{color:#888}
+.hv.r{color:#ff3838}
+.hv.g{color:#00d4b8}
+.hv.o{color:#e67e22}
+
+#ks{margin-top:5px;font-size:9px;letter-spacing:2px;color:#1c1c1c}
+</style>
+</head>
+<body>
+
+<div id="top">
+  <div id="title">THE GAUNTLET</div>
+  <div id="sub">reach the exit &mdash; survive the hunt</div>
+</div>
+
+<div id="wrap">
+  <canvas id="gc"></canvas>
+  <div id="ov">
+    <div id="ot">CAUGHT</div>
+    <div id="om">The hunter found you.</div>
+    <button id="ob" onclick="init()">PLAY AGAIN</button>
+  </div>
+</div>
+
+<div id="hud">
+  <div class="hu"><span class="hl">AI State</span><span class="hv r" id="hst">—</span></div>
+  <div class="hu"><span class="hl">Weapon</span><span class="hv o" id="hwp">NONE</span></div>
+  <div class="hu"><span class="hl">Traps Set</span><span class="hv" id="htr">0</span></div>
+  <div class="hu"><span class="hl">Threat Level</span><span class="hv r" id="hth">LOW</span></div>
+  <div class="hu"><span class="hl">Exit In</span><span class="hv g" id="hex">—</span></div>
+  <div class="hu"><span class="hl">Attempts</span><span class="hv" id="hat">0</span></div>
+</div>
+<div id="ks">WASD / ARROWS &mdash; MOVE &nbsp;·&nbsp; R &mdash; RESTART</div>
+
+<script>
+"use strict";
+
+// ═══════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════
+const T=32, COLS=30, ROWS=20, CW=COLS*T, CH=ROWS*T;
+const MR=Math.floor(ROWS/2);
+const ER=MR, EC=COLS-2;         // Exit: row 10, col 28
+const PR=MR, PC=1;               // Player start: row 10, col 1
+const ESR=MR;
+const ESC=Math.floor((COLS-1)*.75); // Enemy start: row 10, col ~21
+
+const WALL=1, EMPTY=0;
+const KNIFE='KNIFE', XBOW='XBOW', MINE='MINE';
+const St={
+  HUNT:'HUNT', INTERCEPT:'INTERCEPT', DECEIVE:'DECEIVE',
+  EQUIP:'EQUIP', TRAP:'TRAP', AMBUSH:'AMBUSH',
+  SHOOT:'SHOOT', WAIT:'WAIT'
+};
+
+// ═══════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════
+const cv=document.getElementById('gc');
+cv.width=CW; cv.height=CH;
+const cx=cv.getContext('2d');
+
+// ═══════════════════════════════════════
+// SPRITE IMAGE REFERENCES
+// ═══════════════════════════════════════
+/*
+ ┌─ PLAYER SPRITE ──────────────────────────────────────────────────────┐
+ │ File: player.png  (place in same folder as index.html)               │
+ │ Format: Square PNG with transparency, facing RIGHT by default        │
+ │ Size: 32×32 to 128×128 px recommended                                │
+ │                                                                       │
+ │ Where to find sprites:                                                │
+ │  • https://kenney.nl/assets/topdown-tanks-redux  (free, CC0)         │
+ │  • https://opengameart.org/content/top-down-character-sprites        │
+ │  • https://itch.io/game-assets/free/tag-top-down  (many free packs) │
+ │  • Search "top-down hero sprite png" on opengameart.org              │
+ └──────────────────────────────────────────────────────────────────────┘
+
+ ┌─ ENEMY SPRITE ───────────────────────────────────────────────────────┐
+ │ File: enemy.png  (place in same folder as index.html)                │
+ │ Format: Square PNG with transparency, facing RIGHT by default        │
+ │ Size: 32×32 to 128×128 px recommended                                │
+ │                                                                       │
+ │ Where to find sprites:                                                │
+ │  • https://opengameart.org/content/guard-character-sprites-top-down  │
+ │  • https://opengameart.org/content/animated-monster-sprites          │
+ │  • https://itch.io/game-assets/free  (search: "enemy hunter")       │
+ │  • Search "top-down enemy sprite png transparent" on opengameart.org │
+ └──────────────────────────────────────────────────────────────────────┘
+
+ The code auto-rotates sprites based on movement direction.
+ If these files are missing, drawn arrow avatars are used as fallback.
+*/
+const pImg=new Image(); pImg.src='player.png'; let pOk=false;
+pImg.onload=()=>pOk=true; pImg.onerror=()=>pOk=false;
+const eImg=new Image(); eImg.src='enemy.png'; let eOk=false;
+eImg.onload=()=>eOk=true; eImg.onerror=()=>eOk=false;
+
+// ═══════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════
+const ri =(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const md =(r1,c1,r2,c2)=>Math.abs(r1-r2)+Math.abs(c1-c2);
+const inB=(r,c)=>r>=0&&r<ROWS&&c>=0&&c<COLS;
+const wk =(r,c)=>inB(r,c)&&grid[r]?.[c]!==WALL;
+const tx =c=>c*T+T/2;
+const ty =r=>r*T+T/2;
+const lr =(a,b,t)=>a+(b-a)*t;
+const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+const ρ    =(a,b,t)=>lr(a,b,clamp(t,0,1));
+
+// ═══════════════════════════════════════
+// GLOBAL STATE
+// ═══════════════════════════════════════
+let grid=[],items=[],traps=[];
+let P={},E={};
+let phase='PLAY', lastT=0, afId=null, runs=0, shk=0;
+
+// ═══════════════════════════════════════
+// A* PATHFINDING
+// ═══════════════════════════════════════
+function astar(sr,sc,er,ec,avoid=new Set()){
+  // Allow pathing to exit tile even if neighbour of wall
+  if(!wk(er,ec)&&!(er===ER&&ec===EC)) return null;
+  const K=(r,c)=>r*COLS+c;
+  const H=(r,c)=>md(r,c,er,ec);
+  const os=[],cl=new Set(),g={},f={},par={};
+  const sk=K(sr,sc);
+  g[sk]=0; f[sk]=H(sr,sc); os.push({r:sr,c:sc});
+
+  while(os.length){
+    // Pop lowest f
+    let li=0;
+    for(let i=1;i<os.length;i++)
+      if((f[K(os[i].r,os[i].c)]??9999)<(f[K(os[li].r,os[li].c)]??9999)) li=i;
+    const cur=os.splice(li,1)[0];
+    const ck=K(cur.r,cur.c);
+
+    if(cur.r===er&&cur.c===ec){
+      // Reconstruct (exclude start node)
+      const path=[];
+      let k=ck;
+      while(par[k]!==undefined){
+        path.unshift({r:Math.floor(k/COLS),c:k%COLS});
+        k=par[k];
+      }
+      return path;
+    }
+    cl.add(ck);
+
+    for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
+      const nr=cur.r+dr, nc=cur.c+dc;
+      if(!wk(nr,nc)&&!(nr===er&&nc===ec)) continue;
+      const nk=K(nr,nc);
+      if(cl.has(nk)||avoid.has(nk)) continue;
+      const tg=(g[ck]??0)+1;
+      if(tg<(g[nk]??9999)){
+        par[nk]=ck; g[nk]=tg; f[nk]=tg+H(nr,nc);
+        const ei=os.findIndex(n=>K(n.r,n.c)===nk);
+        if(ei>=0) os[ei]={r:nr,c:nc}; else os.push({r:nr,c:nc});
+      }
+    }
+  }
+  return null;
+}
+
+// BFS connectivity check
+function conn(r1,c1,r2,c2){
+  const q=[[r1,c1]], seen=new Set([r1*COLS+c1]);
+  while(q.length){
+    const[r,c]=q.shift();
+    if(r===r2&&c===c2) return true;
+    for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
+      const nr=r+dr,nc=c+dc,k=nr*COLS+nc;
+      if(wk(nr,nc)&&!seen.has(k)){seen.add(k);q.push([nr,nc]);}
+    }
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════
+// ROOM GENERATION
+// ═══════════════════════════════════════
+function genRoom(){
+  grid=Array.from({length:ROWS},()=>Array(COLS).fill(EMPTY));
+
+  // Border walls
+  for(let r=0;r<ROWS;r++){grid[r][0]=WALL;grid[r][COLS-1]=WALL;}
+  for(let c=0;c<COLS;c++){grid[0][c]=WALL;grid[ROWS-1][c]=WALL;}
+
+  // Protected zones: player zone (left) and exit zone (right) — no obstacles
+  const prot=(r,c)=>{
+    if(c<=3  &&r>=MR-2&&r<=MR+2) return true;
+    if(c>=COLS-5&&r>=ER-2&&r<=ER+2) return true;
+    return false;
+  };
+
+  // Random wall segments (thin walls that create corridors)
+  const nObs=ri(9,15);
+  let placed=0, tries=0;
+  while(placed<nObs&&tries<600){
+    tries++;
+    const horiz=Math.random()<0.52;
+    const len=ri(2,horiz?8:6);
+    const W=horiz?len:1, H=horiz?1:len;
+    const r=ri(2,ROWS-3-H), c=ri(2,COLS-3-W);
+    let ok=true;
+    for(let dr=0;dr<H&&ok;dr++)
+      for(let dc=0;dc<W&&ok;dc++)
+        if(prot(r+dr,c+dc)||grid[r+dr][c+dc]===WALL) ok=false;
+    if(!ok) continue;
+    for(let dr=0;dr<H;dr++) for(let dc=0;dc<W;dc++) grid[r+dr][c+dc]=WALL;
+    // Verify both player and enemy can still reach exit
+    if(conn(PR,PC,ER,EC)&&conn(ESR,ESC,ER,EC)){
+      placed++;
+    } else {
+      for(let dr=0;dr<H;dr++) for(let dc=0;dc<W;dc++) grid[r+dr][c+dc]=EMPTY;
+    }
+  }
+
+  // Randomly spawn items
+  items=[];
+  const pool=[KNIFE,XBOW,MINE,MINE,KNIFE,XBOW,MINE,KNIFE,MINE];
+  const nItems=ri(3,7);
+  const chosen=[...pool].sort(()=>Math.random()-.5).slice(0,nItems);
+  for(const type of chosen){
+    for(let t=0;t<200;t++){
+      const ir=ri(2,ROWS-3), ic=ri(3,COLS-4);
+      if(grid[ir][ic]!==EMPTY) continue;
+      if(md(ir,ic,PR,PC)<4||md(ir,ic,ER,EC)<3||md(ir,ic,ESR,ESC)<2) continue;
+      if(items.find(i=>md(i.r,i.c,ir,ic)<2)) continue;
+      items.push({r:ir,c:ic,type});
+      break;
+    }
+  }
+}
+
+// ═══════════════════════════════════════
+// INIT / RESET
+// ═══════════════════════════════════════
+function init(){
+  genRoom();
+  traps=[];
+  phase='PLAY';
+  shk=0;
+  runs++;
+
+  P={
+    r:PR,c:PC,
+    rx:tx(PC),ry:ty(PR),   // render position (pixel)
+    vx:tx(PC),vy:ty(PR),   // target position (pixel)
+    dir:'right',alive:true,
+  };
+
+  E={
+    r:ESR,c:ESC,
+    rx:tx(ESC),ry:ty(ESR),
+    vx:tx(ESC),vy:ty(ESR),
+    dir:'left',
+    weapon:null,mines:0,trapsPlaced:0,
+    state:St.HUNT,stTimer:0,
+    decTimer:ri(600,1400),       // time until next AI decision
+    mvTimer:700,mvInt:560,       // time until next move
+    path:[],
+    hist:[],histTimer:600,       // player position history
+    decvTurns:0,
+    tItem:null,dTarget:null,
+    shootCD:0,aimT:0,aiming:false,
+    waitT:0,
+    // "Memory" of where player has been tending to go
+    playerTendency:{dr:0,dc:1}, // initially assumes rightward
+  };
+
+  document.getElementById('hat').textContent=runs;
+  document.getElementById('ov').classList.remove('show');
+  if(!afId){lastT=performance.now();afId=requestAnimationFrame(loop);}
+}
+
+// ═══════════════════════════════════════
+// INPUT
+// ═══════════════════════════════════════
+let ibuf=null;
+document.addEventListener('keydown',e=>{
+  if(e.key==='r'||e.key==='R'){init();return;}
+  if(phase!=='PLAY') return;
+  const map={
+    ArrowUp:[-1,0],w:[-1,0],W:[-1,0],
+    ArrowDown:[1,0],s:[1,0],S:[1,0],
+    ArrowLeft:[0,-1],a:[0,-1],A:[0,-1],
+    ArrowRight:[0,1],d:[0,1],D:[0,1],
+  };
+  if(map[e.key]){e.preventDefault();ibuf=map[e.key];}
+});
+
+function doInput(){
+  if(!ibuf||!P.alive) return;
+  // Allow new move when visually close to target
+  const lag=Math.hypot(P.rx-P.vx,P.ry-P.vy);
+  if(lag>T*.5) return;
+  const[dr,dc]=ibuf; ibuf=null;
+  const nr=P.r+dr, nc=P.c+dc;
+  if(!wk(nr,nc)) return;
+  P.r=nr; P.c=nc;
+  P.vx=tx(nc); P.vy=ty(nr);
+  P.dir=dr<0?'up':dr>0?'down':dc<0?'left':'right';
+}
+
+// ═══════════════════════════════════════
+// AI HELPERS
+// ═══════════════════════════════════════
+function avoidSet(){
+  // Enemy avoids its own traps when pathfinding
+  return new Set(traps.map(t=>t.r*COLS+t.c));
+}
+function pPath(){return astar(P.r,P.c,ER,EC,avoidSet());}
+
+function los(r1,c1,r2,c2){
+  if(r1!==r2&&c1!==c2) return false;
+  if(r1===r2){
+    const[a,b]=[Math.min(c1,c2),Math.max(c1,c2)];
+    for(let c=a+1;c<b;c++) if(grid[r1][c]===WALL) return false;
+  } else {
+    const[a,b]=[Math.min(r1,r2),Math.max(r1,r2)];
+    for(let r=a+1;r<b;r++) if(grid[r][c1]===WALL) return false;
+  }
+  return true;
+}
+
+function chokePoint(path){
+  if(!path||!path.length) return null;
+  let best=null, minOpen=5;
+  for(const t of path){
+    if(md(t.r,t.c,ER,EC)<3) continue; // don't trap right at exit
+    let open=0;
+    for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]])
+      if(wk(t.r+dr,t.c+dc)) open++;
+    if(open<=minOpen){minOpen=open;best=t;}
+  }
+  return best;
+}
+
+function interceptPt(path){
+  // Find earliest point on player's path that enemy can reach first
+  if(!path||!path.length) return null;
+  for(let i=0;i<path.length;i++){
+    const t=path[i];
+    const ed=md(E.r,E.c,t.r,t.c);
+    // +1 head start for player since they move on keypress
+    if(ed<=i+1) return t;
+  }
+  // Fallback: move toward exit region
+  return {r:ER,c:clamp(EC-3,1,COLS-2)};
+}
+
+function nearestItem(){
+  return items.reduce((b,i)=>{
+    const d=md(E.r,E.c,i.r,i.c);
+    return(!b||d<md(E.r,E.c,b.r,b.c))?i:b;
+  },null);
+}
+
+function updateTendency(){
+  const h=E.hist;
+  if(h.length<2) return;
+  let tr=0,tc=0;
+  for(let i=1;i<h.length;i++){
+    tr+=Math.sign(h[i].r-h[i-1].r);
+    tc+=Math.sign(h[i].c-h[i-1].c);
+  }
+  E.playerTendency={dr:Math.sign(tr),dc:Math.sign(tc)};
+}
+
+// ═══════════════════════════════════════
+// AI DECISION ENGINE
+// ═══════════════════════════════════════
+function decide(){
+  const pe=md(E.r,E.c,P.r,P.c);
+  const px=md(P.r,P.c,ER,EC);
+  const ex=md(E.r,E.c,ER,EC);
+
+  // === Emergency: Shoot if crossbow + line of sight ===
+  if(E.weapon===XBOW&&E.shootCD<=0&&los(E.r,E.c,P.r,P.c)&&pe<=16){
+    setState(St.SHOOT); return;
+  }
+
+  // === Panic mode: player almost at exit ===
+  if(px<=3){E.mvInt=270;setState(St.HUNT);return;}
+
+  const it=nearestItem();
+  const id=it?md(E.r,E.c,it.r,it.c):99;
+
+  // Score each possible state
+  const sc={
+    [St.HUNT]:     40,
+    [St.INTERCEPT]:px<20 ? 55+(20-px)*2 : 20,
+    [St.AMBUSH]:   ex<px*.6&&ex<15 ? 80 : 0,
+    [St.EQUIP]:    it&&!E.weapon&&id<=10 ? clamp(88-id*5,20,88) : 0,
+    [St.TRAP]:     E.mines>0&&pe>6&&px>6 ? 72 : 0,
+    [St.DECEIVE]:  pe>10&&Math.random()<0.22 ? 56 : 0,
+    [St.WAIT]:     pe>15&&Math.random()<0.09 ? 47 : 0,
+  };
+
+  const best=Object.entries(sc).sort((a,b)=>b[1]-a[1])[0][0];
+
+  // Speed adjustments per state + knife bonus
+  const kBonus=E.weapon===KNIFE?-80:0;
+  E.mvInt={
+    [St.HUNT]:     460+ri(0,80)+kBonus,
+    [St.INTERCEPT]:420+kBonus,
+    [St.AMBUSH]:   510,
+    [St.EQUIP]:    400,
+    [St.TRAP]:     445,
+    [St.DECEIVE]:  570+ri(0,120),
+    [St.WAIT]:     9999,
+    [St.SHOOT]:    9999,
+  }[best]||500;
+  E.mvInt=Math.max(220,E.mvInt);
+
+  setState(best);
+}
+
+// ═══════════════════════════════════════
+// AI STATE MACHINE
+// ═══════════════════════════════════════
+function setState(st){
+  const changed=st!==E.state;
+  E.state=st;
+  if(changed){E.stTimer=0; E.path=[];}
+
+  const av=avoidSet();
+
+  switch(st){
+    case St.HUNT:
+      E.path=astar(E.r,E.c,P.r,P.c,av)||[];
+      break;
+
+    case St.INTERCEPT:{
+      const pp=pPath();
+      const ip=interceptPt(pp);
+      E.path=ip ? astar(E.r,E.c,ip.r,ip.c,av)||[] : astar(E.r,E.c,P.r,P.c,av)||[];
+      break;
+    }
+
+    case St.AMBUSH:
+      // Sneak to just inside exit zone to wait
+      E.path=astar(E.r,E.c,ER,clamp(EC-2,1,COLS-2),av)||[];
+      break;
+
+    case St.EQUIP:{
+      const it=nearestItem();
+      if(it){E.tItem=it; E.path=astar(E.r,E.c,it.r,it.c,av)||[];}
+      else   setState(St.HUNT);
+      break;
+    }
+
+    case St.TRAP:{
+      const pp=pPath();
+      const ck=chokePoint(pp);
+      if(ck){E.dTarget=ck; E.path=astar(E.r,E.c,ck.r,ck.c,av)||[];}
+      else   setState(St.HUNT);
+      break;
+    }
+
+    case St.DECEIVE:{
+      E.decvTurns=ri(2,6);
+      // Move AWAY from player or perpendicular — feint
+      const ar=Math.sign(E.r-P.r), ac=Math.sign(E.c-P.c);
+      // Build candidates: perpendicular and away — exclude same tile
+      const cands=[
+        {r:E.r+(ar||1), c:E.c       },  // away vertically (or down if same row)
+        {r:E.r+(ar||-1),c:E.c       },  // away vertically alt
+        {r:E.r,         c:E.c+ac    },  // away horizontally
+        {r:E.r,         c:E.c+(ac||1)}, // perp horizontal
+        {r:E.r-1,       c:E.c       },  // straight up
+        {r:E.r+1,       c:E.c       },  // straight down
+      ];
+      const opts=cands.filter(o=>wk(o.r,o.c)&&(o.r!==E.r||o.c!==E.c));
+      if(opts.length){
+        const t=opts[ri(0,opts.length-1)];
+        E.path=astar(E.r,E.c,t.r,t.c,av)||[{r:t.r,c:t.c}];
+      } else {
+        setState(St.HUNT);
+      }
+      break;
+    }
+
+    case St.SHOOT:
+      E.aiming=true;
+      E.aimT=580;  // ms to aim before firing
+      E.path=[];
+      break;
+
+    case St.WAIT:
+      E.waitT=ri(600,2400);
+      E.path=[];
+      break;
+  }
+}
+
+// ═══════════════════════════════════════
+// AI UPDATE LOOP
+// ═══════════════════════════════════════
+function updateAI(dt){
+  if(!P.alive) return;
+  E.stTimer+=dt;
+  E.shootCD=Math.max(0,E.shootCD-dt);
+
+  // Record player positions for tendency analysis
+  E.histTimer-=dt;
+  if(E.histTimer<=0){
+    E.histTimer=700;
+    E.hist.push({r:P.r,c:P.c});
+    if(E.hist.length>8) E.hist.shift();
+    updateTendency();
+  }
+
+  // Full decision re-evaluation (variable timing = human feel)
+  E.decTimer-=dt;
+  if(E.decTimer<=0){
+    E.decTimer=ri(800,2100);
+    decide();
+  }
+
+  // Special states handled first
+  if(E.state===St.WAIT){
+    E.waitT-=dt;
+    if(E.waitT<=0) setState(St.HUNT);
+    return;
+  }
+  if(E.state===St.SHOOT){
+    E.aimT-=dt;
+    if(E.aimT<=0){
+      // Fire!
+      if(los(E.r,E.c,P.r,P.c)&&md(E.r,E.c,P.r,P.c)<=18){
+        endGame('LOSE','bolt');
+      }
+      E.shootCD=5500;
+      E.aiming=false;
+      setState(St.HUNT);
+    }
+    return;
+  }
+
+  // Move timer
+  E.mvTimer-=dt;
+  if(E.mvTimer>0) return;
+  E.mvTimer=E.mvInt;
+  aiStep();
+}
+
+function aiStep(){
+  const av=avoidSet();
+
+  // HUNT: always recalc to latest player position
+  if(E.state===St.HUNT)
+    E.path=astar(E.r,E.c,P.r,P.c,av)||[];
+
+  // INTERCEPT: recalc when path empty
+  if(E.state===St.INTERCEPT&&E.path.length===0){
+    const pp=pPath(), ip=interceptPt(pp);
+    E.path=ip?astar(E.r,E.c,ip.r,ip.c,av)||[]:astar(E.r,E.c,P.r,P.c,av)||[];
+  }
+
+  // Advance along path
+  followPath(av);
+
+  // --- Post-move reactions ---
+
+  // Pick up item if standing on it
+  const ii=items.findIndex(i=>i.r===E.r&&i.c===E.c);
+  if(ii>=0){
+    const it=items.splice(ii,1)[0];
+    if(it.type===MINE) E.mines++;
+    else               E.weapon=it.type;
+    decide(); // re-evaluate after acquiring a weapon
+  }
+
+  // Deploy trap if reached target
+  if(E.state===St.TRAP&&E.dTarget&&E.r===E.dTarget.r&&E.c===E.dTarget.c&&E.mines>0){
+    traps.push({r:E.r,c:E.c});
+    E.mines--;
+    E.trapsPlaced++;
+    E.dTarget=null;
+    // Now cut the player off from the other side — trap + intercept combo
+    setState(St.INTERCEPT);
+  }
+
+  // Count down deception turns
+  if(E.state===St.DECEIVE){
+    E.decvTurns--;
+    if(E.decvTurns<=0) setState(St.INTERCEPT); // snap back aggressively
+  }
+}
+
+function followPath(av){
+  if(!E.path||E.path.length===0){greedyMove();return;}
+  const nxt=E.path.shift();
+  if(!nxt||!wk(nxt.r,nxt.c)){
+    E.path=[];
+    greedyMove();
+    return;
+  }
+  moveTo(E,nxt.r,nxt.c);
+}
+
+function greedyMove(){
+  // Fallback: greedy best-first toward player
+  const dirs=[[-1,0],[1,0],[0,-1],[0,1]]
+    .filter(([dr,dc])=>wk(E.r+dr,E.c+dc))
+    .sort((a,b)=>md(E.r+a[0],E.c+a[1],P.r,P.c)-md(E.r+b[0],E.c+b[1],P.r,P.c));
+  if(dirs.length){const[dr,dc]=dirs[0];moveTo(E,E.r+dr,E.c+dc);}
+}
+
+function moveTo(ent,r,c){
+  ent.dir=r<ent.r?'up':r>ent.r?'down':c<ent.c?'left':'right';
+  ent.r=r; ent.c=c;
+  ent.vx=tx(c); ent.vy=ty(r);
+}
+
+// ═══════════════════════════════════════
+// COLLISION / WIN-LOSS
+// ═══════════════════════════════════════
+function checkGame(){
+  // Win: player reaches exit
+  if(P.r===ER&&P.c===EC){endGame('WIN','');return;}
+
+  // Lose: enemy catches player (knife extends reach)
+  const pe=md(P.r,P.c,E.r,E.c);
+  const reach=E.weapon===KNIFE?1:0;
+  if(pe<=reach){endGame('LOSE','caught');return;}
+
+  // Lose: player steps on trap
+  if(traps.some(t=>t.r===P.r&&t.c===P.c)){endGame('LOSE','trap');return;}
+}
+
+function endGame(res,cause){
+  if(phase!=='PLAY') return;
+  phase=res;
+  P.alive=false;
+  if(res==='LOSE') shk=450;
+
+  const ot=document.getElementById('ot');
+  const om=document.getElementById('om');
+  ot.textContent=res==='WIN'?'ESCAPED':'CAUGHT';
+  ot.className  =res==='WIN'?'win':'lose';
+  om.textContent=res==='WIN'
+    ? 'You slipped through the dark. For now.'
+    : cause==='bolt'  ? 'A crossbow bolt in the shadows.'
+    : cause==='trap'  ? 'The mine was patient. So was it.'
+    : E.weapon===KNIFE? 'The blade found its mark.'
+    : 'It closed the distance.';
+  document.getElementById('ov').classList.add('show');
+}
+
+// ═══════════════════════════════════════
+// HUD UPDATE
+// ═══════════════════════════════════════
+function hud(){
+  const px=md(P.r,P.c,ER,EC);
+  const pe=md(P.r,P.c,E.r,E.c);
+  document.getElementById('hst').textContent=E.state;
+  const wt=E.weapon||(E.mines>0?`${E.mines}× MINE`:'NONE');
+  document.getElementById('hwp').textContent=wt;
+  document.getElementById('htr').textContent=E.trapsPlaced;
+  document.getElementById('hex').textContent=px+' tiles';
+  const lv=pe<=2?'CRITICAL':pe<=4?'HIGH':pe<=8?'ELEVATED':'LOW';
+  const te=document.getElementById('hth');
+  te.textContent=lv;
+  te.className='hv'+(pe<=8?' r':'');
+}
+
+// ═══════════════════════════════════════
+// RENDERING
+// ═══════════════════════════════════════
+function draw(){
+  // Screen shake
+  cx.save();
+  if(shk>0){
+    const s=(shk/450)*5;
+    cx.translate(ri(-s,s),ri(-s,s));
+  }
+
+  // Clear
+  cx.fillStyle='#060606';
+  cx.fillRect(0,0,CW,CH);
+
+  // Tiles
+  for(let r=0;r<ROWS;r++)
+    for(let c=0;c<COLS;c++)
+      grid[r][c]===WALL ? drawWall(c*T,r*T) : drawFloor(c*T,r*T,r,c);
+
+  drawExit();
+  traps.forEach(t=>drawTrap(t));
+  items.forEach(i=>drawItem(i));
+  drawEntity(P,false);
+  drawEntity(E,true);
+  if(E.aiming) drawAimBeam();
+
+  // Danger vignette (red edges when enemy is close)
+  const pe=md(P.r,P.c,E.r,E.c);
+  if(pe<=9){
+    const a=Math.pow((9-pe)/9,1.7)*.52;
+    const vg=cx.createRadialGradient(CW/2,CH/2,CW*.15,CW/2,CH/2,CW*.82);
+    vg.addColorStop(0,'rgba(160,0,0,0)');
+    vg.addColorStop(1,`rgba(160,0,0,${a})`);
+    cx.fillStyle=vg;
+    cx.fillRect(0,0,CW,CH);
+  }
+
+  cx.restore();
+}
+
+function drawWall(x,y){
+  cx.fillStyle='#171717'; cx.fillRect(x,y,T,T);
+  cx.fillStyle='#1f1f1f'; cx.fillRect(x+1,y+1,T-2,T-2);
+  // Top-left highlight
+  cx.fillStyle='#2c2c2c';
+  cx.fillRect(x+2,y+2,T-4,1);
+  cx.fillRect(x+2,y+2,1,T-4);
+  // Bottom-right shadow
+  cx.fillStyle='#111';
+  cx.fillRect(x+2,y+T-3,T-4,1);
+  cx.fillRect(x+T-3,y+2,1,T-4);
+}
+
+function drawFloor(x,y,r,c){
+  cx.fillStyle=(r+c)%2===0?'#0c0c0c':'#0e0e0e';
+  cx.fillRect(x,y,T,T);
+  cx.strokeStyle='#131313'; cx.lineWidth=.5;
+  cx.strokeRect(x+.5,y+.5,T-1,T-1);
+}
+
+function drawExit(){
+  const x=EC*T, y=ER*T;
+  cx.fillStyle='#001208'; cx.fillRect(x,y,T,T);
+
+  // Animated glow
+  const t=Date.now()/1000;
+  const pulse=.1+Math.sin(t*2.8)*.06;
+  const glow=cx.createRadialGradient(x+T/2,y+T/2,2,x+T/2,y+T/2,T*2.2);
+  glow.addColorStop(0,`rgba(0,255,68,${pulse})`);
+  glow.addColorStop(1,'rgba(0,255,68,0)');
+  cx.fillStyle=glow;
+  cx.fillRect(x-T,y-T,T*3,T*3);
+
+  cx.strokeStyle='#00aa2e'; cx.lineWidth=1;
+  cx.strokeRect(x+1,y+1,T-2,T-2);
+
+  cx.fillStyle='#00ff44';
+  cx.font=`bold ${T*.29}px Share Tech Mono`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.shadowBlur=12; cx.shadowColor='#00ff44';
+  cx.fillText('EXIT',x+T/2,y+T/2);
+  cx.shadowBlur=0;
+}
+
+function drawTrap(t){
+  const cx2=cx, xc=t.c*T+T/2, yc=t.r*T+T/2;
+  const p=.5+Math.sin(Date.now()/480+xc*.1)*.5;
+
+  cx2.fillStyle=`rgba(70,0,0,${.2+p*.25})`;
+  cx2.beginPath(); cx2.arc(xc,yc,11,0,Math.PI*2); cx2.fill();
+
+  cx2.strokeStyle=`rgba(255,35,35,${.4+p*.6})`; cx2.lineWidth=2;
+  cx2.beginPath();
+  cx2.moveTo(xc-6,yc-6); cx2.lineTo(xc+6,yc+6);
+  cx2.moveTo(xc+6,yc-6); cx2.lineTo(xc-6,yc+6);
+  cx2.stroke();
+
+  cx2.fillStyle=`rgba(255,60,60,${.7+p*.3})`;
+  cx2.beginPath(); cx2.arc(xc,yc,2.5,0,Math.PI*2); cx2.fill();
+
+  // Label
+  cx2.fillStyle=`rgba(255,60,60,${.4+p*.3})`;
+  cx2.font='7px Share Tech Mono'; cx2.textAlign='center'; cx2.textBaseline='bottom';
+  cx2.fillText('MINE',xc,yc-12);
+}
+
+function drawItem(item){
+  const xc=item.c*T+T/2, yc=item.r*T+T/2;
+  const p=.65+Math.sin(Date.now()/1100)*.35;
+  const cfg={
+    [KNIFE]: {col:'#e67e22',sym:'⚔',label:'KNIFE'},
+    [XBOW]:  {col:'#8e44ad',sym:'⊕',label:'XBOW'},
+    [MINE]:  {col:'#e74c3c',sym:'◉',label:'MINE'},
+  };
+  const{col,sym,label}=cfg[item.type]||{col:'#fff',sym:'?',label:'?'};
+
+  // Ambient glow
+  cx.fillStyle=col+'15';
+  cx.beginPath(); cx.arc(xc,yc,14,0,Math.PI*2); cx.fill();
+
+  // Pulsing ring
+  cx.strokeStyle=col; cx.lineWidth=1.5; cx.globalAlpha=p;
+  cx.beginPath(); cx.arc(xc,yc,9,0,Math.PI*2); cx.stroke();
+  cx.globalAlpha=1;
+
+  // Icon
+  cx.fillStyle=col;
+  cx.font=`${T*.42}px serif`;
+  cx.textAlign='center'; cx.textBaseline='middle';
+  cx.fillText(sym,xc,yc+1);
+
+  // Label below
+  cx.font='7px Share Tech Mono'; cx.fillStyle=col+'99';
+  cx.textBaseline='top';
+  cx.fillText(label,xc,yc+T*.32);
+}
+
+const DIR_ANGLES={right:0,down:Math.PI/2,left:Math.PI,up:-Math.PI/2};
+
+function drawEntity(ent,isEnemy){
+  const xc=ent.rx, yc=ent.ry;
+  const s=T-6, hs=s/2;
+  const col=isEnemy?'#ff3535':'#00d8bc';
+  const bg =isEnemy?'#280000':'#002522';
+
+  // Ground shadow
+  cx.fillStyle='rgba(0,0,0,.48)';
+  cx.beginPath();
+  cx.ellipse(xc+1,yc+4,hs*.95,hs*.38,0,0,Math.PI*2);
+  cx.fill();
+
+  // Try sprite image first
+  const img=isEnemy?eImg:pImg, ok=isEnemy?eOk:pOk;
+  if(ok){
+    cx.save();
+    cx.translate(xc,yc);
+    cx.rotate(DIR_ANGLES[ent.dir]||0);
+    cx.drawImage(img,-hs,-hs,s,s);
+    cx.restore();
+  } else {
+    // Drawn fallback avatar
+    cx.shadowBlur=16; cx.shadowColor=col;
+    cx.fillStyle=bg; cx.strokeStyle=col; cx.lineWidth=1.5;
+    cx.beginPath();
+    cx.rect(xc-hs,yc-hs,s,s);
+    cx.fill(); cx.stroke();
+    cx.shadowBlur=0;
+    // Inner accent ring
+    cx.strokeStyle=col+'44'; cx.lineWidth=1;
+    cx.beginPath();
+    cx.rect(xc-hs+3,yc-hs+3,s-6,s-6);
+    cx.stroke();
+    // Directional arrow
+    drawArrow(xc,yc,ent.dir,col,s*.33);
+  }
+
+  // Entity label
+  cx.fillStyle=col+'bb';
+  cx.font='7px Share Tech Mono';
+  cx.textAlign='center'; cx.textBaseline='bottom';
+  cx.fillText(isEnemy?'HUNTER':'YOU',xc,yc-hs-3);
+
+  // Enemy status badges
+  if(isEnemy){
+    const wc={[KNIFE]:'#e67e22',[XBOW]:'#8e44ad'};
+    if(E.weapon){
+      cx.fillStyle=wc[E.weapon]||'#ccc';
+      cx.font='bold 8px Share Tech Mono';
+      cx.textBaseline='bottom';
+      cx.fillText('['+E.weapon+']',xc,yc-hs-12);
+    } else if(E.mines>0){
+      cx.fillStyle='#e74c3c';
+      cx.font='bold 8px Share Tech Mono';
+      cx.textBaseline='bottom';
+      cx.fillText(E.mines+'× MINE',xc,yc-hs-12);
+    }
+    // State indicator dot
+    const scols={
+      [St.HUNT]:'#ff4444',[St.INTERCEPT]:'#ff8800',
+      [St.DECEIVE]:'#ffff00',[St.AMBUSH]:'#aa00ff',
+      [St.TRAP]:'#ff2020',[St.EQUIP]:'#00aaff',
+      [St.SHOOT]:'#ff0000',[St.WAIT]:'#888888',
+    };
+    cx.fillStyle=scols[E.state]||'#fff';
+    cx.beginPath();
+    cx.arc(xc+hs-3,yc-hs+3,3,0,Math.PI*2);
+    cx.fill();
+  }
+}
+
+function drawArrow(xc,yc,dir,col,len){
+  cx.fillStyle=col;
+  cx.save();
+  cx.translate(xc,yc);
+  cx.rotate(DIR_ANGLES[dir]||0);
+  cx.beginPath();
+  cx.moveTo(len,0);
+  cx.lineTo(-len*.48,-len*.62);
+  cx.lineTo(-len*.22,0);
+  cx.lineTo(-len*.48,len*.62);
+  cx.closePath();
+  cx.fill();
+  cx.restore();
+}
+
+function drawAimBeam(){
+  const t=Date.now()/250;
+  const alpha=.3+Math.sin(t*Math.PI)*.2;
+
+  // Dashed beam from enemy to player
+  cx.setLineDash([6,5]);
+  cx.strokeStyle=`rgba(255,80,80,${alpha})`;
+  cx.lineWidth=1.5;
+  cx.beginPath();
+  cx.moveTo(E.rx,E.ry);
+  cx.lineTo(P.rx,P.ry);
+  cx.stroke();
+  cx.setLineDash([]);
+
+  // Targeting reticle on player
+  const pulse=.5+Math.sin(t*Math.PI*2)*.5;
+  cx.strokeStyle=`rgba(255,50,50,${.4+pulse*.5})`;
+  cx.lineWidth=2;
+  const rad=15+Math.sin(t*Math.PI*2)*3;
+  cx.beginPath(); cx.arc(P.rx,P.ry,rad,0,Math.PI*2); cx.stroke();
+  // Crosshair lines
+  cx.beginPath();
+  cx.moveTo(P.rx-rad-4,P.ry); cx.lineTo(P.rx-rad+6,P.ry);
+  cx.moveTo(P.rx+rad-6,P.ry); cx.lineTo(P.rx+rad+4,P.ry);
+  cx.moveTo(P.rx,P.ry-rad-4); cx.lineTo(P.rx,P.ry-rad+6);
+  cx.moveTo(P.rx,P.ry+rad-6); cx.lineTo(P.rx,P.ry+rad+4);
+  cx.stroke();
+}
+
+// ═══════════════════════════════════════
+// MAIN LOOP
+// ═══════════════════════════════════════
+function update(dt){
+  if(phase!=='PLAY') return;
+  doInput();
+
+  // Smooth positional interpolation
+  const f=clamp(.2*dt/16.7,0,1);
+  P.rx=lr(P.rx,P.vx,f); P.ry=lr(P.ry,P.vy,f);
+  E.rx=lr(E.rx,E.vx,f); E.ry=lr(E.ry,E.vy,f);
+
+  updateAI(dt);
+  checkGame();
+  hud();
+
+  if(shk>0) shk=Math.max(0,shk-dt);
+}
+
+function loop(ts){
+  const dt=Math.min(ts-lastT,80);
+  lastT=ts;
+  update(dt);
+  draw();
+  afId=requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════════════
+// START
+// ═══════════════════════════════════════
+init();
+</script>
+</body>
+</html>
