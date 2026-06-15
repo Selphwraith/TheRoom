@@ -1,0 +1,37 @@
+{
+  "name": "the-labyrinth",
+  "productName": "The Labyrinth",
+  "version": "1.1.0",
+  "description": "Escape the maze. Outwit the Warden.",
+  "main": "main.js",
+  "author": "Alex",
+  "license": "UNLICENSED",
+  "scripts": {
+    "www": "node ../scripts/build-www.js desktop/www",
+    "start": "electron .",
+    "dist": "node ../scripts/build-www.js desktop/www && electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "png-to-ico": "^2.1.8"
+  },
+  "build": {
+    "appId": "com.theroom.labyrinth",
+    "productName": "The Labyrinth",
+    "files": ["main.js", "www/**"],
+    "directories": { "output": "dist" },
+    "win": {
+      "target": ["portable", "nsis"],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "TheLabyrinth-setup-${version}.exe"
+    },
+    "portable": {
+      "artifactName": "TheLabyrinth-portable-${version}.exe"
+    }
+  }
+}

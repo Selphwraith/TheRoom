@@ -1,0 +1,17 @@
+{
+  "name": "the-labyrinth-mobile",
+  "version": "1.0.0",
+  "description": "The Labyrinth — Android wrapper (Capacitor)",
+  "private": true,
+  "scripts": {
+    "www": "node ../scripts/build-www.js mobile/www",
+    "sync": "node ../scripts/build-www.js mobile/www && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.2.0",
+    "@capacitor/core": "^6.2.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.2.0"
+  }
+}

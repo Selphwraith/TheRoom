@@ -1,0 +1,9 @@
+{
+  "appId": "com.theroom.labyrinth",
+  "appName": "The Labyrinth",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#0a0806",
+    "allowMixedContent": false
+  }
+}

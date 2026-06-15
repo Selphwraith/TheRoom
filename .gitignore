@@ -1,0 +1,26 @@
+# ── Build outputs / generated ──
+labyrinth-release.apk
+mobile/www/
+mobile/android/
+mobile/keystore/
+desktop/build/
+desktop/dist/
+desktop/www/
+
+# ── Dependencies ──
+node_modules/
+mobile/node_modules/
+desktop/node_modules/
+
+# ── Large toolchain (JDK etc.) ──
+tools/
+
+# ── AI session internals ──
+.claude/
+
+# ── Test artefacts ──
+tests/shots/
+
+# ── OS noise ──
+.DS_Store
+Thumbs.db
