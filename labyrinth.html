@@ -1530,6 +1530,15 @@ function _hmRestore(){
   if(_hmSnap){ score=_hmSnap.score;tier=_hmSnap.tier;totalRuns=_hmSnap.totalRuns;
                runs=_hmSnap.runs;gold=_hmSnap.gold;highScore=_hmSnap.highScore; _hmSnap=null; }
   hunterMode=false; hunterDepth=0; hunterBoons=[]; _hunterCumScore=0; _preySpeedMult=1.0;
+  // Reset all prey AI state so nothing from the hunt leaks into the normal game
+  _minoAccess=null;
+  _preyPath=[]; _preyPlanAt=0; _preyPathIdx=0; _preyThreatened=false;
+  _preyFoundExit=false; _preyExploreGoal=null; _preyExploreAt=0; _preyPausedUntil=0;
+  _preyTrail=[]; _preySightedAt=-Infinity; _lastPreyStepAt=0;
+  _preyKnownER=-1; _preyKnownEC=-1; _preyLostSightAt=-Infinity;
+  _preyVisited=[]; _preyGear=[];
+  // Expunge any run save that captured Hunter state — hunter runs cannot be resumed
+  clearRunSave();
 }
 function hunterSpawnFarFrom(pr,pc){
   const tiles=floorTiles2x2(); let best=null,bd=-1;
@@ -6684,7 +6693,7 @@ function update(dt){
           for(const e of enemies) e.pathStale=true;
         }
         if(!E.stunned&&P.alive){
-          if(E._human){ playMinoStep(E.r,E.c); humanMinotaurStep(E); } // heavy thud + human input
+          if(hunterMode&&E._human){ playMinoStep(E.r,E.c); humanMinotaurStep(E); } // heavy thud + human input
           else { playMinoStep(E.r,E.c); _enemyPathing=true; try{ minotaurAI(E,0); } finally { _enemyPathing=false; } }
           if(E.moving) E.moveT=Math.min(leftover,E.moveDur);
         }
@@ -6694,7 +6703,7 @@ function update(dt){
         E.rx=E.sx+(E.tx-E.sx)*t;
         E.ry=E.sy+(E.ty-E.sy)*t;
       }
-    } else if(E._human&&!E.stunned&&P.alive&&phase==='PLAY'){
+    } else if(hunterMode&&E._human&&!E.stunned&&P.alive&&phase==='PLAY'){
       humanMinotaurStep(E); // idle human minotaur waiting on input (idle enemies never re-tick otherwise)
     }
 
@@ -6744,7 +6753,7 @@ function update(dt){
     // (a deliberate step onto the prey); this proximity check must NOT also fire
     // killPlayer on the prey, or it schedules a stray death overlay over the win.
     const blindCatch=E.vDef&&E.vDef.soundHunter;
-    if(P.alive&&!E.stunned&&!P.invincible&&(E._human||blindCatch||!activePowerups.some(a=>a.type==='shadow'))){
+    if(P.alive&&!E.stunned&&!P.invincible&&((hunterMode&&E._human)||blindCatch||!activePowerups.some(a=>a.type==='shadow'))){
       const half=T*0.5;
       const bodyCorners=[[-half,-half],[-half,half],[half,-half],[half,half]];
       const boonMult=hunterMode?Math.pow(1.25,hunterBoons.filter(b=>b==='reach').length):1;
@@ -8135,9 +8144,12 @@ function wireOvButtons(){
   document.getElementById('pbHowTo').addEventListener('click',_ph);
   document.getElementById('pbHowTo').addEventListener('touchend',e=>{e.preventDefault();_ph();},{passive:false});
   function _pq(){
+    const wasHunter=hunterMode; // capture BEFORE abandonHunter() clears the flag
     abandonIronman(); // quitting an Ironman life abandons it (no board post) + restores progression
-    abandonHunter();  // same for a Hunter run
-    saveRunState(true);
+    abandonHunter();  // same for a Hunter run — _hmRestore() already clears the save
+    // Hunter runs can never be resumed: _hmRestore cleared the save, nothing to write.
+    // Normal runs: persist the current in-progress state for the CONTINUE RUN button.
+    if(!wasHunter) saveRunState(true);
     togglePause(false);
     setGameControlsActive(false);
     phase='MENU';
