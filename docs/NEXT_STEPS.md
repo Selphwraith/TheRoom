@@ -128,9 +128,13 @@ bug is repaired, so the suite tells you when you're done.
   comments / vestigial return), D1–D13 incl. D9 duplicate CSS and the D13 filter →
   `isPristineDefaultProfile()`. `tests/_debug3.js` scratch file also deleted.
 
+- **T3/T4 shipped same day:** one-per-session toast when storage writes fail
+  (quota/private mode); deleting a profile now purges its run save, daily record,
+  replay, and every leaderboard row (`purgeProfileStorage`). ENDLESS SIEGE row
+  added to the How-To's UNLOCKABLE MODES.
+
 ## Still open
 
-- How-To has no ENDLESS SIEGE section yet (button + toasts carry it for now).
 - A5 platform stubs (UNLOCK MORE PROFILES / 3-profile cap): ship-or-strip decision
   still with the owner.
 

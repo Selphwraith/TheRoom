@@ -217,8 +217,8 @@ to 320 fillRects/frame (acceptable), fog gradient is full-canvas per frame (acce
 |----|-------|-------|
 | T1 | How-To drift: tier table says T3=2/T5=3 minotaurs (code: T3=2, T4=3, **T5=4**); "Points = currency" predates the gold/score split (`:1013`); shop cards label costs "PTS" while the meta row says GOLD; weapon slots "1–9" vs code 1–5; defuse header comment "5 seconds" vs 2000 ms; `updateMazeSize` size-step comment stale | `:704-709` vs `:1022-1026`; `:696-699`; `:4856`; `:600` vs `:5056`; `:4709` vs `:997`; `:794-795` |
 | T2 | Monolith: one 6.2k-line file, shared mutable globals. Acknowledged constraint (no build system) — section banners help. The test harness already extracts the `<script>`, which is the seam a future bundler can use. | — |
-| T3 | All localStorage writes are silently try/catch'd — quota failure = invisible progress loss. Surface one toast on save failure. | `:1061, 1301, 1361…` |
-| T4 | Orphaned storage: deleting a profile leaves its `labyrinth_runsave_<id>` key and leaderboard entry behind | `:1877-1893` |
+| T3 | ✅ FIXED 2026-07-02 — `warnStorageFail()` toasts once per session from the profile/run-save/achievement write catches. | `:1061, 1301, 1361…` |
+| T4 | ✅ FIXED 2026-07-02 — `purgeProfileStorage()` removes run save, daily, replay, and every board row on delete. | `:1877-1893` |
 | T5 | ~40 hand-rolled click+touchend listener pairs; a `bindTap(el,fn)` helper removes ~150 lines and future drift | throughout UI code |
 | T6 | Survival achievements only persist on WIN (`achSet('moveTime')` in the win branch only) — a 5-minute run that ends in death counts nothing. If intended, document; if not, mirror the call in the death path. | `:4969` |
 | T7 | No achievements for dynamite/stunbow/stunxbow/slayer, yet they count toward the ARSENAL set (B4-adjacent) | `:1208-1216` |

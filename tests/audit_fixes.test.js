@@ -95,6 +95,30 @@ test('QUIT LEAK: quitting a Daily resets dailyMode for subsequent normal runs', 
   assertEq(g.eval('gold'), goldBefore + 50, 'normal-run gold flows again after a daily quit');
 });
 
+test('T4: deleting a profile purges its run save, daily record, and board rows', () => {
+  const g = createGame({ seed: 44 });
+  const pid = g.eval('activeProfileId');
+  // seed per-profile storage + board rows for this profile and a stranger
+  g.storage.setItem('labyrinth_runsave_' + pid, '{"v":1}');
+  g.storage.setItem('labyrinth_daily_' + pid, '{}');
+  g.storage.setItem('labyrinth_replay_' + pid, '[]');
+  g.storage.setItem('labyrinth_leaderboard', JSON.stringify([
+    { profileId: pid, profileName: 'ME', score: 100 },
+    { profileId: 'other', profileName: 'THEM', score: 50 },
+  ]));
+  g.storage.setItem('labyrinth_leaderboard_ironman', JSON.stringify([
+    { profileId: pid, score: 10, depth: 1 },
+  ]));
+  g.eval(`purgeProfileStorage(${JSON.stringify(pid)})`);
+  assertEq(g.storage.getItem('labyrinth_runsave_' + pid), null, 'run save purged');
+  assertEq(g.storage.getItem('labyrinth_daily_' + pid), null, 'daily record purged');
+  assertEq(g.storage.getItem('labyrinth_replay_' + pid), null, 'replay purged');
+  const lb = JSON.parse(g.storage.getItem('labyrinth_leaderboard'));
+  assertEq(lb.length, 1, 'only the stranger row survives');
+  assertEq(lb[0].profileId, 'other', 'stranger row untouched');
+  assertEq(JSON.parse(g.storage.getItem('labyrinth_leaderboard_ironman')).length, 0, 'ironman row purged');
+});
+
 test('B13: user names are HTML-escaped when rendered', () => {
   const g = createGame({ seed: 13 });
   assertEq(g.eval(`esc('<img src=x onerror=alert(1)>')`),

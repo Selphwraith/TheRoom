@@ -696,6 +696,7 @@ canvas{display:block}
         <h3>UNLOCKABLE MODES</h3>
         <div class="htRow"><div class="htKey" style="color:#9fc0ff">⚔ DAILY</div><div class="htDesc"><b>Daily Gauntlet</b> — one attempt per day on a maze identical for every player. Tier III, a loaner club + bow, no perks, no progression at stake. The attempt is spent the moment you enter. Copy your result and compare.</div></div>
         <div class="htRow"><div class="htKey" style="color:#e89090">⚔ IRONMAN</div><div class="htDesc"><b>One continuous life</b> — keep escaping maze after maze with your full build, the difficulty climbing, until your <b>first death ends everything</b>. No resume, no retry. Posts to its own leaderboard. Unlocks at <b>10,000 high score</b>.</div></div>
+        <div class="htRow"><div class="htKey" style="color:#9fe0c0">⏳ ENDLESS</div><div class="htDesc"><b>Endless Siege</b> — there is <b>no exit</b>. Hunters keep arriving and everything speeds up over time; supply drops of weapons and boons pull you across the maze. Camp in one spot and the siege escalates faster. Score is <b>seconds survived</b>, on its own leaderboard. Unlocks at <b>15,000 high score</b>.</div></div>
         <div class="htRow"><div class="htKey" style="color:#e8a0a0">🐂 HUNTER</div><div class="htDesc"><b>You ARE the Minotaur.</b> Run the prey down before it reaches the exit. Pick a class — each unlocks on a high-score ladder: <b>🐂 Minotaur 5k · 🦅 Scout 10k · 🦬 Bruiser 15k · 💣 Tactician 20k · 🙈 Blind One 25k</b>. The prey gets smarter the higher your best score climbs. Its own leaderboard.</div></div>
       </div>
     </div>
@@ -1147,9 +1148,18 @@ function defaultProfile(playerName='PLAYER', profileName='HERO'){
   };
 }
 
+// T3: storage writes are try/catch'd everywhere (by design — the game must run
+// with storage disabled), but a quota failure used to be INVISIBLE progress
+// loss. Warn once per session, then stay quiet.
+let _storageFailWarned=false;
+function warnStorageFail(){
+  if(_storageFailWarned) return;
+  _storageFailWarned=true;
+  try{showToast('⚠ SAVE FAILED — STORAGE FULL OR BLOCKED. PROGRESS MAY BE LOST.',3200);}catch(e){}
+}
 function saveProfiles(){
   if(ironmanMode||hunterMode||endlessMode) return; // isolated modes never write profile progression
-  try{ localStorage.setItem(PROFILES_KEY,JSON.stringify(profiles)); }catch(e){}
+  try{ localStorage.setItem(PROFILES_KEY,JSON.stringify(profiles)); }catch(e){warnStorageFail();}
 }
 
 function loadProfiles(){
@@ -2062,7 +2072,7 @@ function loadAchievements(){
 function saveAchievements(){
   try{
     localStorage.setItem(ACHIEVEMENTS_KEY,JSON.stringify({counters:achCounters,unlocked:achUnlocked}));
-  }catch(e){}
+  }catch(e){warnStorageFail();}
 }
 
 // Core: increment a counter and check for unlocks
@@ -2149,6 +2159,22 @@ function loadProgress(){
 // ─── Mid-run save: the run itself survives app closes ───
 function runSaveKey(){return 'labyrinth_runsave_'+activeProfileId;}
 function replayKey(){return 'labyrinth_replay_'+activeProfileId;}
+// Deleting a profile must take its storage with it — orphaned run saves,
+// daily records, replays, and board rows used to pile up forever (AUDIT T4)
+function purgeProfileStorage(pid){
+  try{localStorage.removeItem('labyrinth_runsave_'+pid);}catch(e){}
+  try{localStorage.removeItem('labyrinth_replay_'+pid);}catch(e){}
+  try{localStorage.removeItem('labyrinth_daily_'+pid);}catch(e){}
+  const boards=[LEADERBOARD_KEY,IRONMAN_LB_KEY,ENDLESS_LB_KEY,
+                ...HUNTER_CLASSES.map(c=>HUNTER_LB_KEY+'_'+c.id)];
+  for(const key of boards){
+    try{
+      const b=JSON.parse(localStorage.getItem(key)||'[]');
+      const kept=b.filter(e=>e.profileId!==pid);
+      if(kept.length!==b.length) localStorage.setItem(key,JSON.stringify(kept));
+    }catch(e){}
+  }
+}
 function hasRunSave(){try{return !!localStorage.getItem(runSaveKey());}catch(e){return false;}}
 function clearRunSave(){try{localStorage.removeItem(runSaveKey());}catch(e){}}
 var _lastRunSave=0;
@@ -2200,7 +2226,7 @@ function saveRunState(force){
       cgold:_runGoldEarned, cvault:_runEnteredVault, cstill:_runMaxStillMs, cnoise:_runCarriedNoisemaker,
     };
     localStorage.setItem(runSaveKey(),JSON.stringify(data));
-  }catch(e){}
+  }catch(e){warnStorageFail();}
 }
 function restoreRun(){
   let data=null;
@@ -2901,6 +2927,7 @@ function renderProfiles(expandedId, confirmDeleteId){
       yesBtn.textContent='YES — DELETE';
       function doDelete(e){
         e.preventDefault();e.stopPropagation();
+        purgeProfileStorage(p.id); // orphaned run save / boards / daily / replay (AUDIT T4)
         profiles=profiles.filter(pr=>pr.id!==p.id);
         // Reset in-memory state so deleted profile's runs/tier can't bleed into next profile
         score=0;totalRuns=0;runs=0;tier=1;highScore=0;gold=0;
