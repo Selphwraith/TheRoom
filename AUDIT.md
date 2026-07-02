@@ -88,21 +88,21 @@ only self-XSS on a local game, but the moment the planned platform login / share
 
 ## 2. Incomplete / abandoned features
 
-### A1 — Mouse aim mode (abandoned, fully dead)
+### A1 — Mouse aim mode (abandoned, fully dead) — ✅ DELETED 2026-07-02 (click-to-fire kept)
 `aimMode` is **never set to `true` anywhere** (grep-verified). Dead with it: the `#aimCursor`
 SVG element (`:160, 547-554`), the `mousemove` aim handlers (`:5080-5091`), the dashed
 aim-line render in `drawAll()` (`:5580-5585`), and the `aimMode` branch in `playerFire()`
 (`:4499`). Click-to-fire (`:5071`) works without it. Either finish (set `aimMode=true` on
 weapon hover / right-click) or delete ~40 lines.
 
-### A2 — Legacy step-movement joystick (superseded, still ticking)
+### A2 — Legacy step-movement joystick (superseded, still ticking) — ✅ DELETED 2026-07-02
 Two `tickJoystick` definitions: an empty one at `:4363` ("intentionally empty") and the real
 one at `:5147` that wins via hoisting. It runs **every frame** (`update()` `:5214`), computes
 repeat timers, and calls `startPlayerMove()` — which is a documented no-op (`:4357-4360`).
 The entire path is vestigial since continuous `movePlayer()` reads `JOY` directly (`:4238`).
 Delete both plus `joyMoveTimer`.
 
-### A3 — The original "armed Minotaur" AI (unreachable)
+### A3 — The original "armed Minotaur" AI (unreachable) — ✅ DELETED 2026-07-02 (Blind One's live sound logic kept)
 The weapon-pickup / mine-laying / flanking state machine — `EQUIP` and `MINE_PLACE` states
 (`:4038-4068`), `FLANK` (`:4017-4029`), `aiScore_weapon` (`:3503`),
 `findMinePlacementTarget` (`:3510`), `countAlternatePaths` (`:2879`) — is dead. Control flow:
@@ -116,7 +116,7 @@ Consequences:
 - How-To still says "The Minotaur picks up mines and lays them strategically" (`:636`).
 - `WEAPONS[].score` (`:809-824`) is only consumed by this dead scoring.
 
-### A4 — 8-direction sprite sheets (plan abandoned, comments stale)
+### A4 — 8-direction sprite sheets (plan abandoned, comments stale) — ✅ comments corrected 2026-07-02
 Comment block `:2180-2194` documents 8 sprite rows including diagonals; actual configs are
 `cols:4, rows:4` and `DIR_ROW` (`:2246-2250`) maps diagonals onto cardinals. Harmless, but
 the comment will mislead the next artist/integrator.
@@ -143,13 +143,13 @@ actually uses hotbar slot indexes 1–5 (`:5056`). Dead data.
 ### A8 — Fractional HP system (`P.hpFrac`)
 Root cause of B5; half-built, never initialized in `initGame()`, not saved by `saveRunState`.
 
-### A9 — `genMaze()` vestigial return
+### A9 — `genMaze()` vestigial return — ✅ DELETED 2026-07-02
 `:2445` returns `{exitR:-1,exitC:-1}`; ignored by `initGame()` (`:2914`) since exit placement
 moved out. Cosmetic.
 
 ---
 
-## 3. Dead code inventory (safe deletions)
+## 3. Dead code inventory (safe deletions) — ✅ ALL SWEPT 2026-07-02 (D1–D13; D13 refactored into `isPristineDefaultProfile()`)
 
 | ID | What | Where |
 |----|------|-------|
@@ -192,7 +192,7 @@ direct-step picks a `wk()` tile (`:3921-3933`) that `startEnemyMove` then reject
 `wk2x2` validation (`:4428`) → hunter freezes in place until the player moves. Fix: have the
 ring search validate with a cheap component-id map (computed once per maze change).
 
-### P3 — A\* is O(V²) and runs on the render path
+### P3 — A\* is O(V²) and runs on the render path — ✅ FIXED 2026-07-02 (binary heap + `playerExitPath()` cache)
 The open set is a `Map` scanned linearly per pop (`:2491-2493`); V ≈ 5,829 at the 87×67 cap.
 Worse: the status bar's `hasMineOnPath` (`:5539`) runs a **full player→exit A\* every frame**
 whenever any enemy mine exists — i.e., precisely in late-game Tactician runs on the biggest

@@ -21,6 +21,8 @@ Line numbers refer to `labyrinth.html`.
 | Pickaxe | tool (shop 200 / vault), hold-E dig 2.5 s, one run | — | ✅ |
 | Gold piles | 10–500, weighted steps | — | ✅ `goldAmount :867` |
 
+Note 2026-07-02: the dead-code sweep removed WEAPONS[].score + key fields, the armed-minotaur AI, aim mode, and the legacy joystick tick (AUDIT A1-A3, D1-D13).
+
 Supporting: hotbar 5 slots + derived backpack ✅ (`:3373-3485`), auto-refill on consume ✅,
 stash banking on win (cap 10, club excluded) ✅, stash sell with pro-rata for partial shot
 pools ✅ (`:4901-4924`), loadout picks max 2 ✅.
@@ -38,14 +40,14 @@ pools ✅ (`:4901-4924`), loadout picks max 2 ✅.
 Shared: 2×2 footprint movement ✅ · stun system with per-enemy timers ✅ · secret doors
 (open on contact, auto-close 2.2 s, blocked-close retry) — untested headlessly ·
 catch = 4-corner pixel check `catchR=0.8T` ✅ (implicitly) · shooting on LOS ✅ (scout).
-🔧 Dead: EQUIP/MINE_PLACE/FLANK legacy AI (A3), `canPickupWeapons` flags, `WEAPONS[].score`.
+✅ 2026-07-02: the dead EQUIP/MINE_PLACE/FLANK legacy AI, `canPickupWeapons` flags, and `WEAPONS[].score` were deleted (A3).
 
 ## Player mechanics
 
 | System | Where | Status |
 |---|---|---|
 | Continuous movement, per-axis wall slide | `movePlayer :4227` | ✅ tested |
-| Joystick (analog, dead zone 0.22) | `:5095` | ✅ live path; 🔧 A2 dead legacy tick |
+| Joystick (analog, dead zone 0.22) | `:5095` | ✅ live path (A2 legacy tick deleted 2026-07-02) |
 | Fire (weapons only) | `playerFire :4455` | ✅ |
 | Interact: defuse → dig → camouflage | `playerInteract :4540` | ✅ (B1+B2 fixed — toast says HOLD E, ring shares `defuseNeededMs()`) |
 | Mine camouflage (2 s hold, resets on release) | `:5316-5360` | ✅ A* treats hidden mines as floor |
@@ -106,5 +108,4 @@ camera lerp + clamp · tier wall palettes · sprite system with drawn fallbacks 
 achievement popup queue (logic ✅) · WebAudio: music crossfade, proximity loop, step
 round-robin, map-wide smash falloff — ✅ B11 fixed (file renamed; every referenced asset now ships).
 
-🔧 Dead presentation: mouse aim mode + cursor + aim line (A1), 8-direction sprite comments
-(A4), duplicated profile-card CSS (D9).
+✅ 2026-07-02: dead presentation removed — aim mode/cursor/aim line deleted (A1, click-to-fire kept), sprite comments corrected (A4), duplicate profile-card CSS deleted (D9).

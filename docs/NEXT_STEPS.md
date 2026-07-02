@@ -29,10 +29,7 @@ bug is repaired, so the suite tells you when you're done.
 8. ✅ **B7 — save all player traps + fuses.** SHIPPED 2026-06-11: all trap kinds
    round-trip with noisemaker ring time and dynamite fuse progress/direction.
    Test: `save_restore.test.js`.
-9. **P3 — A\* off the render path.** Cache the player→exit path, recompute on player cell
-   change / `invalidateFloorCache()`; use it for the status bar (`:5539`), `packTarget`
-   WARDEN (`:2565`), and `getScentTarget` projection. Then swap the open-set Map scan
-   (`:2491`) for a binary heap. Biggest CPU win on late-game mazes.
+9. ✅ **P3 — A\* off the render path.** SHIPPED 2026-07-02 — see session log below.
 10. ✅ **P4 — viewport culling.** SHIPPED 2026-06-11: `drawMaze` clamps to camera
     bounds (+1 tile shake pad); items, traps, powerups and enemies skip offscreen
     draws via `onScreen()`. ~18× overdraw cut at the 87×67 cap.
@@ -51,9 +48,7 @@ bug is repaired, so the suite tells you when you're done.
 13. ✅ **P2 (audit) — reachability-aware `nearestValid2x2`.** SHIPPED 2026-06-11:
     `comp2x2` component map (enemy semantics), component-filtered anchor picks,
     camp-the-entrance fallback, dominant-component enemy spawns.
-14. **Dead code sweep** — A1 (aim mode), A2 (legacy joystick tick), A3 (armed-AI block +
-    flags + `WEAPONS[].score`), D1-D13, duplicate CSS (D9). ~350 lines lighter, zero risk;
-    do it *after* the P0/P1 fixes so diffs stay reviewable.
+14. ✅ **Dead code sweep** — SHIPPED 2026-07-02 — see session log below.
 15. ✅ **T1 — How-To/UI copy pass.** SHIPPED 2026-06-11: tier table corrected
     (T4=3/T5=4 + ASCENSION row), gold/score split documented, shop costs labeled 💰
     everywhere, slots 1–5, autosave copy, new "THE NEW RITES" section covering sealed
@@ -125,11 +120,19 @@ bug is repaired, so the suite tells you when you're done.
   score = seconds survived on its own board (`labyrinth_leaderboard_endless`). Full
   isolation (G15 gates). Tests in `tests/endless_test.js`.
 
-## Still open (carried forward)
+- **P3 (perf) shipped same day:** binary-heap A\* open set (~0.6ms/call on the 87×67
+  max maze) + `playerExitPath()` cache shared by the status bar, WARDEN role, and
+  pace ghost.
+- **Dead-code sweep shipped same day:** A1 (aim mode; click-to-fire kept), A2 (legacy
+  joystick tick), A3 (armed-minotaur AI; Blind One's live path kept), A4/A9 (stale
+  comments / vestigial return), D1–D13 incl. D9 duplicate CSS and the D13 filter →
+  `isPristineDefaultProfile()`. `tests/_debug3.js` scratch file also deleted.
 
-9.  **P3 — A\* off the render path** (unchanged, see above).
-14. **Dead code sweep** (unchanged, see above).
+## Still open
+
 - How-To has no ENDLESS SIEGE section yet (button + toasts carry it for now).
+- A5 platform stubs (UNLOCK MORE PROFILES / 3-profile cap): ship-or-strip decision
+  still with the owner.
 
 ## Testing backlog (coverage gaps from AUDIT §6)
 

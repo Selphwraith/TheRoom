@@ -180,8 +180,6 @@ canvas{display:block}
     width:auto;
   }
 }
-#aimCursor{position:absolute;pointer-events:none;z-index:20;width:36px;height:36px;display:none;}
-#aimCursor svg{width:100%;height:100%}
 #stunWrap{position:fixed;top:74px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);border:1px solid rgba(201,168,76,.5);padding:4px 12px 6px;border-radius:4px;display:none;pointer-events:none;font-size:10px;letter-spacing:2px;color:var(--gold);text-align:center;white-space:nowrap;z-index:600;}
 #stunBar{width:120px;height:4px;background:#222;margin-top:4px;border-radius:2px;}
 #stunFill{height:100%;background:var(--gold);border-radius:2px;}
@@ -317,34 +315,6 @@ canvas{display:block}
 #profileOv{position:fixed;inset:0;background:rgba(8,6,3,.97);display:none;flex-direction:column;align-items:center;justify-content:flex-start;padding:24px 16px;z-index:999;overflow-y:auto;touch-action:pan-y;}
 #profileOv h2{font-family:'Cinzel Decorative',serif;font-size:clamp(14px,3vw,22px);letter-spacing:6px;color:var(--gold);margin-bottom:16px;}
 .profile-list{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;margin-bottom:20px;}
-.profile-add{border:1px dashed rgba(255,255,255,.5);border-radius:6px;padding:16px;text-align:center;cursor:pointer;color:rgba(255,255,255,.75);font-size:11px;letter-spacing:3px;transition:all .2s;max-width:420px;width:100%;box-sizing:border-box;}
-.profile-add:hover,.profile-add:active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.08);}
-.pc-form{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;margin-top:4px;}
-.pc-form-row{display:flex;flex-direction:column;gap:4px;}
-.pc-form-label{font-size:8px;letter-spacing:2px;color:rgba(255,255,255,.55);}
-.pc-form-input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.35);border-radius:4px;padding:11px 12px;color:#fff;font-family:'Cinzel',serif;font-size:13px;letter-spacing:2px;outline:none;width:100%;box-sizing:border-box;}
-.pc-form-input:focus{border-color:var(--gold);background:rgba(201,168,76,.07);}
-.pc-form-input::placeholder{color:rgba(255,255,255,.22);}
-.pc-form-submit{background:rgba(201,168,76,.2);border:1px solid rgba(201,168,76,.8);color:var(--gold);font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;padding:12px;border-radius:4px;cursor:pointer;transition:all .2s;width:100%;}
-.pc-form-submit:hover,.pc-form-submit:active{background:rgba(201,168,76,.35);}
-.pc-form-cancel{background:transparent;border:1px solid rgba(255,255,255,.25);color:rgba(255,255,255,.45);font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;padding:9px;border-radius:4px;cursor:pointer;transition:all .2s;width:100%;}
-.pc-form-cancel:hover,.pc-form-cancel:active{border-color:rgba(255,255,255,.5);color:rgba(255,255,255,.75);}
-.profile-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.22);border-radius:6px;padding:12px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;}
-.profile-card:hover{border-color:rgba(201,168,76,.55);background:rgba(201,168,76,.08);}
-.profile-card.active-profile{border-color:rgba(201,168,76,.85);background:rgba(201,168,76,.11);}
-.profile-card.expanded,.profile-card.expanded:hover{flex-direction:column;align-items:stretch;cursor:default;border-color:rgba(201,168,76,.85);}
-.pc-card-top{display:flex;align-items:center;gap:12px;width:100%;cursor:pointer;}
-.pc-actions{display:flex;gap:8px;margin-top:10px;width:100%;}
-.pc-btn{flex:1;padding:10px 0;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;border-radius:3px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;}
-.pc-btn-load{background:rgba(201,168,76,.2);border:1px solid rgba(201,168,76,.75);color:var(--gold);}
-.pc-btn-load:hover,.pc-btn-load:active{background:rgba(201,168,76,.38);}
-.pc-btn-del{background:rgba(180,30,30,.15);border:1px solid rgba(220,60,60,.65);color:rgba(255,130,130,.95);}
-.pc-btn-del:hover,.pc-btn-del:active{background:rgba(180,30,30,.32);}
-.profile-card .pc-avatar{font-size:28px;}
-.profile-card .pc-info{flex:1;}
-.profile-card .pc-name{font-size:14px;letter-spacing:3px;color:#fff;font-family:'Cinzel',serif;}
-.profile-card .pc-stats{font-size:8px;letter-spacing:1px;color:rgba(255,255,255,.45);margin-top:3px;}
-.profile-card .pc-active{font-size:9px;color:#90f070;letter-spacing:1px;font-weight:bold;}
 .profile-add{border:1px dashed rgba(255,255,255,.5);border-radius:6px;padding:16px;text-align:center;cursor:pointer;color:rgba(255,255,255,.7);font-size:11px;letter-spacing:3px;transition:all .2s;max-width:420px;width:100%;box-sizing:border-box;}
 .profile-add:hover,.profile-add:active{border-color:var(--gold);color:var(--gold);background:rgba(201,168,76,.08);}
 .pc-form{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px;margin-top:8px;}
@@ -357,12 +327,12 @@ canvas{display:block}
 .pc-form-submit:hover,.pc-form-submit:active{background:rgba(201,168,76,.35);}
 .pc-form-cancel{background:transparent;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.4);font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;padding:8px;border-radius:4px;cursor:pointer;transition:all .2s;width:100%;}
 .pc-form-cancel:hover,.pc-form-cancel:active{border-color:rgba(255,255,255,.4);color:rgba(255,255,255,.7);}
-/* Boost card contrast */
+/* Profile cards (single definition — duplicate block removed, AUDIT D9) */
 .profile-card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:12px 16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px;}
 .profile-card:hover{border-color:rgba(201,168,76,.5);background:rgba(201,168,76,.07);}
 .profile-card.active-profile{border-color:rgba(201,168,76,.8);background:rgba(201,168,76,.1);}
 .profile-card.expanded,.profile-card.expanded:hover{flex-direction:column;align-items:stretch;cursor:default;border-color:rgba(201,168,76,.8);}
-.pc-card-top{display:flex;align-items:center;gap:12px;width:100%;}
+.pc-card-top{display:flex;align-items:center;gap:12px;width:100%;cursor:pointer;}
 .pc-actions{display:flex;gap:8px;margin-top:10px;width:100%;}
 .pc-btn{flex:1;padding:10px 0;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;border-radius:3px;cursor:pointer;transition:all .2s;-webkit-tap-highlight-color:transparent;}
 .pc-btn-load{background:rgba(201,168,76,.2);border:1px solid rgba(201,168,76,.7);color:var(--gold);}
@@ -563,14 +533,6 @@ canvas{display:block}
 <div id="wrap">
   <canvas id="cv"></canvas>
   <canvas id="fogCv"></canvas>
-  <div id="aimCursor"><svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="18" cy="18" r="14" stroke="#e8d080" stroke-width="1.5" stroke-dasharray="4 3"/>
-    <line x1="18" y1="2" x2="18" y2="10" stroke="#e05555" stroke-width="1.5"/>
-    <line x1="18" y1="26" x2="18" y2="34" stroke="#e05555" stroke-width="1.5"/>
-    <line x1="2" y1="18" x2="10" y2="18" stroke="#e05555" stroke-width="1.5"/>
-    <line x1="26" y1="18" x2="34" y2="18" stroke="#e05555" stroke-width="1.5"/>
-    <circle cx="18" cy="18" r="2" fill="#e05555"/>
-  </svg></div>
 </div>
 <div id="stunWrap">STUNNED <div id="stunBar"><div id="stunFill" style="width:100%"></div></div></div>
 <div id="toast"></div>
@@ -878,21 +840,21 @@ let T=30;
 const WALL=1, FLOOR=0;
 
 const WEAPONS={
-  knife: {type:'knife', name:'KNIFE',  icon:'🗡️', key:'1', stunMs:1400, range:1.5, proj:false, mine:false, score:30,  color:'#c8a050'},
-  club:  {type:'club',  name:'CLUB',   icon:'🪓', key:'2', stunMs:2000, range:1.5, proj:false, mine:false, score:35,  color:'#8b6040'},
-  torch: {type:'torch', name:'TORCH',  icon:'🔦', key:'3', stunMs:2400, range:2.5, proj:false, mine:false, score:40,  color:'#e07030'},
-  bow:   {type:'bow',   name:'BOW',    icon:'🏹', key:'4', stunMs:3200, range:13,  proj:true,  mine:false, score:70,  color:'#80b060'},
-  xbow:  {type:'xbow',  name:'XBOW',   icon:'⚔️', key:'5', stunMs:5000, range:16,  proj:true,  mine:false, score:90,  color:'#6090d0'},
-  stunbow:{type:'stunbow',name:'STUN BOW',icon:'🌟',key:'4',stunMs:6000, range:14,  proj:true,  mine:false, score:100, color:'#e0d020',
+  knife: {type:'knife', name:'KNIFE',  icon:'🗡️', stunMs:1400, range:1.5, proj:false, mine:false, color:'#c8a050'},
+  club:  {type:'club',  name:'CLUB',   icon:'🪓', stunMs:2000, range:1.5, proj:false, mine:false, color:'#8b6040'},
+  torch: {type:'torch', name:'TORCH',  icon:'🔦', stunMs:2400, range:2.5, proj:false, mine:false, color:'#e07030'},
+  bow:   {type:'bow',   name:'BOW',    icon:'🏹', stunMs:3200, range:13,  proj:true,  mine:false, color:'#80b060'},
+  xbow:  {type:'xbow',  name:'XBOW',   icon:'⚔️', stunMs:5000, range:16,  proj:true,  mine:false, color:'#6090d0'},
+  stunbow:{type:'stunbow',name:'STUN BOW',icon:'🌟',stunMs:6000, range:14,  proj:true,  mine:false, color:'#e0d020',
            isStunBow:true, reloads:true, reloadMs:3000, maxShots:3}, // 3 shots then gone
-  stunxbow:{type:'stunxbow',name:'STUN XBOW',icon:'💫',key:'5',stunMs:6000, range:16, proj:true, mine:false, score:150, color:'#c0e0ff',
+  stunxbow:{type:'stunxbow',name:'STUN XBOW',icon:'💫',stunMs:6000, range:16, proj:true, mine:false, color:'#c0e0ff',
             isStunBow:true, reloads:true, reloadMs:2500, maxShots:10}, // 10 lifetime shots — persists across runs
-  slayer:{type:'slayer',name:'SLAYER',icon:'⚔️',key:'5',stunMs:1200, range:12, proj:true, mine:false, score:300, color:'#e0484f',
+  slayer:{type:'slayer',name:'SLAYER',icon:'⚔️',stunMs:1200, range:12, proj:true, mine:false, color:'#e0484f',
           isStunBow:true, isSlayer:true, reloads:true, reloadMs:10000, maxShots:3}, // relic: 3 charges, 3 hits on ONE minotaur = permanent kill
-  mine:       {type:'mine',       name:'MINE',       icon:'💣', key:'6', stunMs:6000, range:0, proj:false, mine:true,  score:80, color:'#a040a0'},
-  noisemaker: {type:'noisemaker', name:'NOISEMAKER', icon:'🔔', key:'7', stunMs:0,    range:0, proj:false, mine:true,  score:50, color:'#f0b020',
+  mine:       {type:'mine',       name:'MINE',       icon:'💣', stunMs:6000, range:0, proj:false, mine:true,  color:'#a040a0'},
+  noisemaker: {type:'noisemaker', name:'NOISEMAKER', icon:'🔔', stunMs:0,    range:0, proj:false, mine:true,  color:'#f0b020',
                isNoisemaker:true, noiseDuration:5000},
-  dynamite:   {type:'dynamite',   name:'DYNAMITE',   icon:'🧨', key:'8', stunMs:0,    range:0, proj:false, mine:true,  score:60, color:'#e03020',
+  dynamite:   {type:'dynamite',   name:'DYNAMITE',   icon:'🧨', stunMs:0,    range:0, proj:false, mine:true,  color:'#e03020',
                isDynamite:true, fuseMs:2000}, // placed like mine, detonates after fuse, 3w×2d blast
 };
 const ITEM_TYPES=['knife','club','torch','bow','xbow','mine','noisemaker','dynamite'];
@@ -1096,8 +1058,6 @@ const IRONMAN_LB_KEY='labyrinth_leaderboard_ironman';
 let shk=0, rumble=0;
 // Glitch — intensity 0-1 driven by proximity, causes scanline/chromatic aberration effects
 let glitchIntensity=0;
-let aimMode=false,aimAngle=0;
-let stunTimer=0,stunMax=0;
 // defuse state
 let defusing=false,defuseTimer=0,defuseTarget=null;
 const DEFUSE_TIME=2000;
@@ -1105,7 +1065,7 @@ const DEFUSE_TIME=2000;
 function defuseNeededMs(){return (P.perks&&P.perks.quickDefuse?DEFUSE_TIME*0.5:DEFUSE_TIME)*permSteadyMult();}
 let eKeyHeld=false;
 // hide mine state — after placing a mine, player can hold fire for 2s to hide it
-let hidingMine=false,hideTimer=0,hideTarget=null,hideGrace=0;
+let hidingMine=false,hideTimer=0,hideTarget=null;
 const HIDE_TIME=2000;
 // Pickaxe digging state
 let digging=false,digTimer=0;
@@ -1162,8 +1122,12 @@ const PROFILES_KEY='labyrinth_profiles';
 const ACTIVE_PROFILE_KEY='labyrinth_active_profile';
 const ACHIEVEMENTS_KEY='labyrinth_achievements';
 // Capture BEFORE loadProfiles() auto-creates a default — used by splash screen
-const _splashHasExisting=(()=>{try{const r=localStorage.getItem(PROFILES_KEY);const p=JSON.parse(r);if(!Array.isArray(p)||p.length===0) return false;const real=p.filter(d=>!(d.playerName==='PLAYER'&&d.profileName==='HERO'&&(d.totalRuns||0)===0&&(d.highScore||0)===0));return real.length>0;}catch(e){return false;}})();
-const _splashExistingCount=(()=>{try{const r=localStorage.getItem(PROFILES_KEY);const p=JSON.parse(r);if(!Array.isArray(p)) return 0;return p.filter(d=>!(d.playerName==='PLAYER'&&d.profileName==='HERO'&&(d.totalRuns||0)===0&&(d.highScore||0)===0)).length;}catch(e){return 0;}})();
+// A profile is a "pristine default" if it still has the auto-created name and
+// zero history — used to decide whether the splash shows FIRST-RUN copy and
+// whether the auto-default gets culled once a real profile exists (AUDIT D13).
+function isPristineDefaultProfile(d){return d.playerName==='PLAYER'&&d.profileName==='HERO'&&(d.totalRuns||0)===0&&(d.highScore||0)===0;}
+const _splashHasExisting=(()=>{try{const r=localStorage.getItem(PROFILES_KEY);const p=JSON.parse(r);if(!Array.isArray(p)||p.length===0) return false;const real=p.filter(d=>!isPristineDefaultProfile(d));return real.length>0;}catch(e){return false;}})();
+const _splashExistingCount=(()=>{try{const r=localStorage.getItem(PROFILES_KEY);const p=JSON.parse(r);if(!Array.isArray(p)) return 0;return p.filter(d=>!isPristineDefaultProfile(d)).length;}catch(e){return 0;}})();
 const LEADERBOARD_KEY='labyrinth_leaderboard';
 
 // In-memory state — loaded on boot
@@ -1174,7 +1138,7 @@ function defaultProfile(playerName='PLAYER', profileName='HERO'){
   return {
     id: Date.now()+'_'+Math.floor(Math.random()*9999),
     playerName, profileName,
-    score:0, totalRuns:0, tier:1, highScore:0,
+    totalRuns:0, tier:1, highScore:0,
     gold:0,
     stash:[], // persistent item stash — banked on escape, lost on death
     warden:{mines:0,stuns:0,defuses:0,still:0,move:0,fast:0,n:0}, // playstyle fingerprint
@@ -1211,7 +1175,7 @@ function loadProfiles(){
       if(!p.ghosts||typeof p.ghosts!=='object') p.ghosts={};
     }
     // Strip auto-generated PLAYER/HERO defaults if real profiles exist alongside them
-    const realProfiles=profiles.filter(d=>!(d.playerName==='PLAYER'&&d.profileName==='HERO'&&(d.totalRuns||0)===0&&(d.highScore||0)===0));
+    const realProfiles=profiles.filter(d=>!isPristineDefaultProfile(d));
     if(realProfiles.length>0&&realProfiles.length<profiles.length){
       profiles=realProfiles;
       saveProfiles();
@@ -3077,7 +3041,7 @@ function showNewProfileForm(){
     // Single identity: one name is the profile name AND the leaderboard name.
     const p=defaultProfile(heroName,heroName);
     p.permPerks=typeof PERM_PERKS!=='undefined'?Object.fromEntries(PERM_PERKS.map(pk=>[pk.id,0])):{};
-    profiles=profiles.filter(d=>!(d.playerName==='PLAYER'&&d.profileName==='HERO'&&(d.totalRuns||0)===0&&(d.highScore||0)===0));
+    profiles=profiles.filter(d=>!isPristineDefaultProfile(d));
     profiles.push(p);
     saveProfiles();
     // Re-render the overlay with proper structure before selecting
@@ -3251,23 +3215,12 @@ function stopAllMusic(fadeSec=1.2){
 // ═══════════════════════════════════════
 // SPRITE SYSTEM
 // ═══════════════════════════════════════
-// File names — place these in a sprites/ folder next to labyrinth.html:
-//
-//   sprites/player.png   — 512 × 256 px  (8 cols × 4 rows, each frame 64×64)
-//   sprites/minotaur.png — 768 × 384 px  (8 cols × 4 rows, each frame 96×96)
-//
-// Sheet layout (same for both):
-//   Col  0-3  = walk cycle frames 0-3
-//   Row  0    = South  (facing toward camera / down)
-//   Row  1    = North  (away from camera / up)
-//   Row  2    = East   (right)
-//   Row  3    = West   (left)
-//   Row  4    = SE diagonal
-//   Row  5    = SW diagonal
-//   Row  6    = NE diagonal
-//   Row  7    = NW diagonal
-//
-// If either file is missing the game falls back to the drawn shapes silently.
+// File names — place these in a sprites/ folder next to labyrinth.html.
+// Sheet layout (all sheets): 4 cols = walk cycle frames 0-3;
+// 4 rows = S (down), N (up), E (right), W (left). There are NO diagonal
+// rows — DIR_ROW maps diagonal movement onto the nearest cardinal row.
+// (An 8-row diagonal plan was abandoned; don't draw art for it. AUDIT A4)
+// If a file is missing the game falls back to the drawn shapes silently.
 
 const SPRITE={
   player:{
@@ -3315,7 +3268,6 @@ const SPRITE_VARIANTS={
 };
 
 // Direction → sprite row. Diagonals reuse nearest cardinal — no extra art needed.
-// Direction → sprite row.
 // Row 0 = walk down, Row 1 = walk up, Row 2 = walk right, Row 3 = walk left
 // Diagonals: vertical component dominates — moving down-right shows down row
 const DIR_ROW={
@@ -3378,14 +3330,13 @@ function getDir8Enemy(E){
 
 // Draw a sprite frame centred on (cx,cy), scaled to fit drawSize×drawSize
 // Adds effects (stun flash, speed glow etc.) via canvas compositing
-function drawSprite(sp,row,frame,cx,cy,drawSize,alpha=1,flipH=false){
+function drawSprite(sp,row,frame,cx,cy,drawSize,alpha=1){
   if(!sp.loaded||!sp.img) return false; // signal: use fallback
   const sw=sp.frameW, sh=sp.frameH;
   const sx=frame*sw, sy=row*sh;
   const half=drawSize/2;
   ctx.save();
   ctx.translate(cx,cy);
-  if(flipH) ctx.scale(-1,1);
   ctx.globalAlpha=alpha;
   ctx.drawImage(sp.img, sx,sy,sw,sh, -half,-half,drawSize,drawSize);
   ctx.globalAlpha=1;
@@ -3547,8 +3498,6 @@ function genMaze(){
       break;
     }
   }
-
-  return{exitR:-1,exitC:-1};
 }
 
 function flood(sr,sc){
@@ -3842,7 +3791,6 @@ const VARIANTS={
       moveDurMult:1.1,
       color:'rgba(160,25,25,0.22)', glowColor:'rgba(160,25,25,0.22)',
       drawSizeMult:1.0,
-      canPickupWeapons:false, canPickupRangedOnly:false,
       wallBreaker:false,
       soundHunter:false,
       dmg:1,
@@ -3855,7 +3803,6 @@ const VARIANTS={
       moveDurMult:1.35,
       color:'rgba(80,40,10,0.28)', glowColor:'rgba(80,40,10,0.28)',
       drawSizeMult:1.15,
-      canPickupWeapons:false, canPickupRangedOnly:false,
       wallBreaker:true,
       soundHunter:false,
       dmg:1,
@@ -3868,7 +3815,6 @@ const VARIANTS={
       moveDurMult:0.72,
       color:'rgba(20,80,160,0.22)', glowColor:'rgba(20,80,160,0.22)',
       drawSizeMult:0.85,
-      canPickupWeapons:true, canPickupRangedOnly:true,
       wallBreaker:false,
       soundHunter:false,
       dmg:0.5,
@@ -3881,7 +3827,6 @@ const VARIANTS={
       moveDurMult:1.25,
       color:'rgba(40,140,40,0.22)', glowColor:'rgba(40,140,40,0.22)',
       drawSizeMult:1.0,
-      canPickupWeapons:false, canPickupRangedOnly:false,
       wallBreaker:false,
       soundHunter:true,
       dmg:1,
@@ -3894,7 +3839,6 @@ const VARIANTS={
       moveDurMult:1.0,
       color:'rgba(160,25,25,0.22)', glowColor:'rgba(160,25,25,0.22)', // looks like Classic
       drawSizeMult:1.0,
-      canPickupWeapons:false, canPickupRangedOnly:false,
       wallBreaker:false,
       soundHunter:false,
       dmg:1,
@@ -3922,14 +3866,12 @@ function makeEnemy(spawnR,spawnC,variantId='classic'){
       state:'HUNT',
       stateTimer:0,stateMs:tc.stateMs,
       cachedPath:[],pathStale:true,pathAge:0,
-      tItem:null,minePlaceTarget:null,_defuseTarget:null,_savedMoveDur:null,
+      _defuseTarget:null,_savedMoveDur:null,
       shootCooldown:0,
       lastPlayerR:-1,lastPlayerC:-1,
-      playerStuckTimer:0,turnsChasing:0,
       // variant fields
-      variant:variantId,
       vDef:vDef,
-    variant:_variantId,
+      variant:_variantId,
       // vision / wander state
       lastKnownR:-1,lastKnownC:-1, // last seen player position
       _wanderTarget:null,
@@ -3938,8 +3880,6 @@ function makeEnemy(spawnR,spawnC,variantId='classic'){
       soundR:-1,soundC:-1,
       _lastHeardR:-1,_lastHeardC:-1, // last grid tile where we heard player
       _prevPlayerR:undefined,_prevPlayerC:undefined, // for Blind One first-move detection
-      // tactician — mine laying timer (starts at 0 so first mine lays immediately)
-      mineTimer:variantId==='tactician'?10000:null,
       // bruiser — wall-break cooldown
       wallBreakCd:0,
     };
@@ -4142,7 +4082,6 @@ function bresenhamLine(r0,c0,r1,c1){
 function beginCharge(E){
   E.chargePath=bresenhamLine(E.r,E.c,P.r,P.c);
   E.chargeDuration=Math.min(E.chargePath.length+2, 16); // max 16 steps per charge
-  E.chargeTargetR=P.r; E.chargeTargetC=P.c;
   E.state='CHARGING';
   E.cachedPath=[];
   playWallSmash(E.r,E.c);
@@ -4177,17 +4116,6 @@ function nearestValid2x2(tr,tc,er,ec){
 }
 
 // Count unique paths from (sr,sc) to (er,ec) — used by Minotaur tactical analysis
-function countAlternatePaths(sr,sc,er,ec,blockedSet){
-  // Just try two paths: with and without one key junction
-  const p1=astar(sr,sc,er,ec,blockedSet);
-  if(!p1) return 0;
-  // Block the first step of p1 and try again
-  const block2=new Set(blockedSet||[]);
-  if(p1.length>0) block2.add(p1[0][0]*COLS+p1[0][1]);
-  const p2=astar(sr,sc,er,ec,block2);
-  return p2?2:1;
-}
-
 // ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
@@ -4216,7 +4144,6 @@ function initGame(){
   pendingContracts=[];
   _runGoldEarned=0;_runEnteredVault=false;_runMaxStillMs=0;_runCarriedNoisemaker=false;_contractReport=[];
   _runStartTs=performance.now();
-  stunTimer=0;stunMax=0;aimMode=false;
   clearRunSave(); // a fresh run invalidates any suspended one
   try{const _bp=getActiveProfile();if(_bp&&_bp.atMerchant){_bp.atMerchant=false;saveProfiles();}}catch(e){}
   pauseOpen=false; try{document.getElementById('pauseOv').style.display='none';}catch(e){}
@@ -4225,7 +4152,7 @@ function initGame(){
   // must, or post-quit runs have a dead joystick ("the game froze").
   try{setGameControlsActive(true);}catch(e){}
   defusing=false;defuseTimer=0;defuseTarget=null;eKeyHeld=false;
-  hidingMine=false;hideTimer=0;hideTarget=null;hideGrace=0;
+  hidingMine=false;hideTimer=0;hideTarget=null;
   digging=false;digTimer=0;
   dynamiteFuses=[];
 
@@ -4635,8 +4562,6 @@ function initGame(){
       usedCells.add(r*COLS+c);break;
     }
   }
-  // Build enemy roster label
-  const varLabels=[...new Set(variantIds)];
   updateRosterDisplay();
   document.getElementById('scoreDisplay').textContent=goldHud();
   updateHUD();
@@ -4750,7 +4675,7 @@ function togglePause(force){
   pauseOpen=(force!==undefined)?force:!pauseOpen;
   document.getElementById('pauseOv').style.display=pauseOpen?'flex':'none';
   if(pauseOpen){
-    aimMode=false;cancelDefuse();cancelHide();saveRunState(true);
+    cancelDefuse();cancelHide();saveRunState(true);
     // The autosave promise only holds for normal runs — isolated modes can't resume
     try{
       document.getElementById('pauseNote').textContent=
@@ -4880,31 +4805,6 @@ function showToast(msg,dur=1400){
 // 3. Persistent A* path with smart invalidation — not just "next tile" but full planned route
 // 4. Flanking — approaches from alternate angle if player is backing away
 // 5. Shoot on LOS — fires ranged weapons before closing to melee
-
-function aiScore_weapon(E,wDef,distToItem){
-  const travelPenalty=distToItem*4;
-  const currScore=E.weapon?E.weapon.def.score:0;
-  const newScore=wDef.score-travelPenalty;
-  return{worth: newScore>currScore+10, score:newScore};
-}
-
-function findMinePlacementTarget(E){
-  const playerPath=astar(P.r,P.c,EXIT.r,EXIT.c);
-  if(!playerPath||playerPath.length<3) return null;
-  let bestTile=null,bestScore=-Infinity;
-  const sampleStep=Math.max(1,Math.floor(playerPath.length/8));
-  for(let i=2;i<playerPath.length-1;i+=sampleStep){
-    const[tr,tc]=playerPath[i];
-    if(traps.some(t=>t.r===tr&&t.c===tc)) continue;
-    const mDist=astar(E.r,E.c,tr,tc,null,false,2)?astar(E.r,E.c,tr,tc,null,false,2).length:999;
-    const pDist=i;
-    const blockSet=new Set([tr*COLS+tc]);
-    const altPaths=countAlternatePaths(P.r,P.c,EXIT.r,EXIT.c,blockSet);
-    const sc=(pDist-mDist)*3+(altPaths===1?20:0)+(playerPath.length-i);
-    if(sc>bestScore&&mDist<pDist){bestScore=sc;bestTile=[tr,tc];}
-  }
-  return bestTile;
-}
 
 // Main AI tick — called each frame per enemy when not animating
 function minotaurAI(E,dt){
@@ -5355,106 +5255,20 @@ function minotaurAI(E,dt){
     }
     return;
   }
+  // ── From here down, only the BLIND ONE executes ──
+  // classic/scout return from the unified scent block above; bruiser and
+  // tactician return from their own blocks. The original armed-minotaur
+  // EQUIP/MINE_PLACE/FLANK state machine that lived here was unreachable
+  // (AUDIT A3) — deleted.
   if(E.stateTimer<=0||E.pathStale){
     E.pathStale=false;
     E.stateTimer=ri(E.stateMs[0],E.stateMs[1]);
-
-    let bestItem=null,bestItemScore=-Infinity;
-    // Bruiser and Scout never pick up weapons (Scout has innate crossbow)
-    const canEquip=E.vDef&&(!E.vDef.canPickupWeapons||E.vDef.id==='scout')?false:true;
-    const rangedOnly=E.vDef&&E.vDef.canPickupRangedOnly;
-    if(canEquip){
-      for(const it of items){
-        if(rangedOnly&&!it.def.proj) continue;
-        const d=md(E.r,E.c,it.r,it.c);
-        const realD=d<=8?(astar(E.r,E.c,it.r,it.c,null,false,2)||{length:d*2}).length:d*1.5;
-        const{worth,score:ws}=aiScore_weapon(E,it.def,realD);
-        if(worth&&ws>bestItemScore){bestItemScore=ws;bestItem=it;}
-      }
-    }
-
-    let mineTile=null;
-    if(E.weapon&&E.weapon.def.mine){
-      // Only first enemy does mine-laying (tactician role)
-      if(E===enemies[0]) mineTile=findMinePlacementTarget(E);
-    }
-
-    if(mineTile&&E.weapon?.def.mine){
-      E.state='MINE_PLACE';E.minePlaceTarget=mineTile;
-      E.cachedPath=astar(E.r,E.c,...mineTile,null,false,2)||[];
-    } else if(bestItem&&dToPlayer>4){
-      E.state='EQUIP';E.tItem=bestItem;
-      E.cachedPath=astar(E.r,E.c,bestItem.r,bestItem.c,null,false,2)||[];
-    } else if(E.vDef?.soundHunter){
-      // Blind One — do NOT compute path to player here.
-      // Sound logic below handles its own pathing based on what it has heard.
-      E.state='HUNT';
-    } else {
-      E.state='HUNT';
-      E.turnsChasing++;
-      const pred_r=clamp(P.r+P.vr,0,ROWS-1),pred_c=clamp(P.c+P.vc,0,COLS-1);
-      const useTarget=(P.vr!==0||P.vc!==0)&&wk2x2(pred_r,pred_c)&&dToPlayer>2;
-      const rawTr2=useTarget?pred_r:P.r, rawTc2=useTarget?pred_c:P.c;
-      const[tr,tc]=nearestValid2x2(rawTr2,rawTc2,E.r,E.c);
-
-      if(E.turnsChasing>10&&Math.random()<0.35){
-        E.state='FLANK';
-        E.turnsChasing=0;
-        const angle=Math.atan2(P.r-E.r,P.c-E.c);
-        const perpR=clamp(Math.round(P.r+2*Math.sin(angle+Math.PI/2)),1,ROWS-2);
-        const perpC=clamp(Math.round(P.c+2*Math.cos(angle+Math.PI/2)),1,COLS-2);
-        const[fp2r,fp2c]=nearestValid2x2(perpR,perpC,E.r,E.c);
-        if(wk2x2(fp2r,fp2c)){
-          E.cachedPath=astar(E.r,E.c,fp2r,fp2c,null,false,2)||[];
-        } else {
-          E.cachedPath=astar(E.r,E.c,tr,tc,null,true,2)||[];
-          E.state='HUNT';
-        }
-      } else {
-        E.cachedPath=astar(E.r,E.c,tr,tc,null,true,2)||[];
-      }
-    }
+    E.state='HUNT'; // pathing is driven by the sound logic below
   }
 
   let nextR=E.r,nextC=E.c;
 
-  if(E.state==='EQUIP'){
-    const it=E.tItem;
-    if(!it||!items.includes(it)){E.state='HUNT';E.stateTimer=0;E.pathStale=true;return;}
-    if(E.r===it.r&&E.c===it.c){
-      if(!E.weapon||it.def.score>E.weapon.def.score){
-        E.weapon=it;
-        showToast('⚠ MINOTAUR ARMED: '+it.def.name.toUpperCase(),1300);
-      }
-      items.splice(items.indexOf(it),1);
-      E.tItem=null;E.state='HUNT';E.stateTimer=0;E.pathStale=true;
-      return;
-    }
-    if(!E.cachedPath.length) E.cachedPath=astar(E.r,E.c,it.r,it.c,null,false,2)||[];
-    if(E.cachedPath.length){[nextR,nextC]=E.cachedPath.shift();}
-    else{E.state='HUNT';E.stateTimer=0;E.pathStale=true;}
-
-  } else if(E.state==='MINE_PLACE'){
-    const mt=E.minePlaceTarget;
-    if(!mt){E.state='HUNT';E.stateTimer=0;E.pathStale=true;return;}
-    if(E.r===mt[0]&&E.c===mt[1]){
-      if(E.weapon&&E.weapon.def.mine){
-        traps.push({r:mt[0],c:mt[1],owner:'enemy',def:E.weapon.def});
-        E.weapon=null;
-        showToast('⚠ MINE LAID — CHECK YOUR PATH',2000);
-      }
-      E.minePlaceTarget=null;E.state='HUNT';E.stateTimer=0;E.pathStale=true;
-      return;
-    }
-    if(!E.cachedPath.length) E.cachedPath=astar(E.r,E.c,...mt,null,false,2)||[];
-    if(E.cachedPath.length){[nextR,nextC]=E.cachedPath.shift();}
-    else{E.state='HUNT';E.stateTimer=0;E.pathStale=true;}
-
-  } else {
-    const hasShadow=activePowerups.some(a=>a.type==='shadow');
-    const isSoundHunter=E.vDef&&E.vDef.soundHunter;
-
-    if(isSoundHunter){
+  {
       // ── Blind One sound logic ──
       // INFINITE hearing — hears any player movement anywhere on the map.
       // "Movement" = player changed grid tile since last AI tick.
@@ -5552,17 +5366,6 @@ function minotaurAI(E,dt){
           }
         }
       }
-    } else {
-      // Normal hunt — predict player trajectory, not just current position
-      const playerMoved2=P.r!==E.lastPlayerR||P.c!==E.lastPlayerC;
-      const pathEmpty=E.cachedPath.length===0;
-      if(playerMoved2||pathEmpty||E.pathAge>300){
-        E.lastPlayerR=P.r;E.lastPlayerC=P.c;E.pathAge=0;
-        const[tr,tc]=getScentTarget(E);
-        E.state='HUNT';
-        E.cachedPath=astar(E.r,E.c,tr,tc,null,true,2)||[];
-      }
-    }
 
     if(E.cachedPath.length){[nextR,nextC]=E.cachedPath.shift();}
 
@@ -5570,7 +5373,7 @@ function minotaurAI(E,dt){
     // This bypasses wk2x2 for the final approach so corners don't create dead zones
     // Blind One: only steers at close range when it has an ACTIVE sound fix —
     // a silent standing player stays invisible even at point-blank range.
-    if(!E.vDef?.soundHunter||E.soundR>=0){
+    if(E.soundR>=0){ // only steer with an ACTIVE sound fix — silence is safety
       const pixDist=Math.hypot(E.rx-P.rx,E.ry-P.ry);
       if(pixDist<T*3.0){
         const dr=P.r-E.r, dc=P.c-E.c;
@@ -5793,15 +5596,6 @@ function movePlayer(dt){
   }
 }
 
-// Legacy wrapper — still used by Minotaur catch check
-function startPlayerMove(dr,dc){
-  // No-op: movement is now continuous via movePlayer()
-  // Kept so nothing else breaks
-}
-
-// tickJoystick is now just a visual nub update — movement handled in movePlayer
-function tickJoystick(dt){} // intentionally empty
-
 function openSecretDoor(d){
   if(d.open) return;
   d.open=true;
@@ -5960,20 +5754,14 @@ function playerFire(){
     return;
   }
   if(w.proj){
-    // If mouse aim mode is active (from mousemove), fire along aim angle
-    // Otherwise fire instantly in the player's current cardinal facing direction
+    // Fire in the player's current cardinal facing direction — no diagonals
+    // (click-to-fire on the canvas aims freely; see the cv click handler)
     let angle;
-    if(aimMode){
-      angle=aimAngle;
-      aimMode=false;
-    } else {
-      // Cardinal direction from P.dir — no diagonals
-      switch(P.dir){
-        case 'up':    angle=-Math.PI/2; break;
-        case 'down':  angle= Math.PI/2; break;
-        case 'left':  angle= Math.PI;   break;
-        case 'right': default: angle=0; break;
-      }
+    switch(P.dir){
+      case 'up':    angle=-Math.PI/2; break;
+      case 'down':  angle= Math.PI/2; break;
+      case 'left':  angle= Math.PI;   break;
+      case 'right': default: angle=0; break;
     }
     fireProjectileAngle(P.rx,P.ry,angle,'player',w);
     playSoundAt('bow_fire',0.8,0.06,P.r,P.c);
@@ -6032,7 +5820,7 @@ function playerInteract(){
     const tr=P.r+dr,tc=P.c+dc;
     const mine=traps.find(t=>t.r===tr&&t.c===tc&&t.owner==='player'&&!t.hidden);
     if(mine){
-      hidingMine=true;hideTimer=0;hideTarget=mine;hideGrace=0;
+      hidingMine=true;hideTimer=0;hideTarget=mine;
       document.getElementById('hideWrap').style.display='block';
       document.getElementById('hideCountdown').textContent='2.0';
       document.getElementById('hideFill').style.width='0%';
@@ -6145,12 +5933,7 @@ function stunEnemy(E,ms,reason){
   // Use per-enemy stun timers stored on E itself
   E.stunTimer=ms*stunMult;E.stunMax=ms*stunMult;
   E.cachedPath=[];E.pathStale=true;
-  // Update shared stun HUD with nearest enemy's status
-  const ne=nearestEnemy();
-  if(ne&&ne.stunned){
-    document.getElementById('stunWrap').style.display='block';
-    stunTimer=ne.stunTimer;stunMax=ne.stunMax;
-  }
+  // (the update loop's stun HUD pass shows/hides the bar from per-enemy timers)
   playSoundAt('hit_minotaur',0.85,0.06,E.r,E.c);
   playSoundAt('stun_hit',0.9,0.05,E.r,E.c);
   showToast('STUNNED! '+Math.ceil(ms*stunMult/1000)+'s — RUN',1400);
@@ -6205,7 +5988,7 @@ function cancelDefuse(){
 }
 
 function cancelHide(){
-  hidingMine=false;hideTimer=0;hideTarget=null;hideGrace=0;
+  hidingMine=false;hideTimer=0;hideTarget=null;
   document.getElementById('hideWrap').style.display='none';
   document.getElementById('hideFill').style.width='0%';
 }
@@ -6578,7 +6361,6 @@ function copyShareText(){
   showToast('COPY NOT SUPPORTED HERE',1000);
 }
 function showOverlay(type,reason=''){
-  const tierCfg=getTier();
   clearRunSave(); // the run is over either way
   foldWardenStats(type==='win'); // the warden takes notes either way
   if(dailyMode){ showDailyResult(type,reason); return; } // dailies skip ALL progression
@@ -6734,7 +6516,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='escape'){
     if(backpackOpen){toggleBackpack(false);}
     else if(phase==='PLAY'){togglePause();}
-    aimMode=false;cancelDefuse();cancelHide();
+    cancelDefuse();cancelHide();
   }
   else{
     const num=parseInt(e.key);
@@ -6757,22 +6539,8 @@ cv.addEventListener('click',e=>{
   if(phase!=='PLAY'||!P.activeWeapon||!P.activeWeapon.def.proj) return;
   const rect=cv.getBoundingClientRect();
   const mx=e.clientX-rect.left+camX,my=e.clientY-rect.top+camY;
-  aimAngle=Math.atan2(my-P.ry,mx-P.rx);
-  aimMode=false;
-  fireProjectileAngle(P.rx,P.ry,aimAngle,'player',P.activeWeapon.def);
+  fireProjectileAngle(P.rx,P.ry,Math.atan2(my-P.ry,mx-P.rx),'player',P.activeWeapon.def);
   removePlayerWeapon();
-});
-cv.addEventListener('mousemove',e=>{
-  if(!aimMode) return;
-  const rect=cv.getBoundingClientRect();
-  const mx=e.clientX-rect.left+camX,my=e.clientY-rect.top+camY;
-  aimAngle=Math.atan2(my-P.ry,mx-P.rx);
-  const cur=document.getElementById('aimCursor');
-  // Show cursor in viewport space (no camera offset needed for DOM element)
-  cur.style.left=(P.rx-camX-18)+'px';cur.style.top=(P.ry-camY-18)+'px';cur.style.display='block';
-});
-document.addEventListener('mousemove',e=>{
-  if(!aimMode) document.getElementById('aimCursor').style.display='none';
 });
 
 // ─── Thumb Joystick ───────────────────
@@ -6830,38 +6598,14 @@ const DEAD=0.22, JMAX=38;
   document.addEventListener('touchcancel',onEnd,{passive:false});
 })();
 
-// Called every frame from the game loop when player is not animating
-let joyMoveTimer=0;
-function tickJoystick(dt){
-  if(!JOY.active||phase!=='PLAY') return;
-  joyMoveTimer-=dt;
-  if(joyMoveTimer>0) return;
-  const ax=Math.abs(JOY.dx), ay=Math.abs(JOY.dy);
-  if(ax<DEAD&&ay<DEAD) return;
-  // Move on dominant axis; if both exceed dead zone move on both (diagonal)
-  const doDiag=ax>DEAD&&ay>DEAD;
-  if(ay>=ax||doDiag){
-    const dr=JOY.dy<-DEAD?-1:JOY.dy>DEAD?1:0;
-    if(dr!==0) startPlayerMove(dr,0);
-  }
-  if(ax>ay||doDiag){
-    const dc=JOY.dx<-DEAD?-1:JOY.dx>DEAD?1:0;
-    if(dc!==0) startPlayerMove(0,dc);
-  }
-  // Repeat delay: 170ms gentle push, 90ms full deflection
-  const mag=Math.min(Math.sqrt(JOY.dx*JOY.dx+JOY.dy*JOY.dy),1);
-  joyMoveTimer=Math.round(170-80*Math.max(0,(mag-DEAD)/(1-DEAD)));
-}
 const fireBtn=document.getElementById('fireBtn');
 let fireTouched=false;
-let fireButtonHeld=false;
 fireBtn.addEventListener('touchstart',e=>{
-  e.preventDefault();fireTouched=true;fireButtonHeld=true;playerFire();
+  e.preventDefault();fireTouched=true;playerFire();
 },{passive:false});
 fireBtn.addEventListener('touchend',e=>{
-  e.preventDefault();fireButtonHeld=false;
+  e.preventDefault();
 },{passive:false});
-fireBtn.addEventListener('touchcancel',e=>{fireButtonHeld=false;});
 fireBtn.addEventListener('click',()=>{if(fireTouched){fireTouched=false;return;}playerFire();});
 
 // Interact button — defuse / hide mines only
@@ -6903,8 +6647,7 @@ function update(dt){
   // Reset per-frame movement flag (set by movePlayer if player has active input)
   P.movedThisFrame=false;
   // Continuous player movement (keyboard + joystick) — sets P.movedThisFrame
-  movePlayer(dt);
-  tickJoystick(dt);
+  movePlayer(dt); // continuous movement reads JOY directly — no legacy step-tick (A2 removed)
   // Sprite animation tick — reads P.movedThisFrame set just above
   tickAnims(dt);
   if(P.alive&&!P.movedThisFrame) _runStillTime+=dt/1000; // warden fingerprint
@@ -7326,12 +7069,6 @@ function drawAll(){
   drawMaze();drawTraps();drawItems();drawProjectiles();drawExit();
   for(const E of enemies) if(E.alive&&onScreen(E.rx,E.ry,T*4)) drawMinotaur(E);
   if(P.alive) drawPlayer();
-  if(aimMode){
-    ctx.save();ctx.strokeStyle='rgba(232,208,128,0.3)';ctx.lineWidth=1;ctx.setLineDash([3,5]);
-    ctx.beginPath();ctx.moveTo(P.rx,P.ry);
-    ctx.lineTo(P.rx+Math.cos(aimAngle)*cv.width*4,P.ry+Math.sin(aimAngle)*cv.height*4);
-    ctx.stroke();ctx.restore();
-  }
   ctx.restore();
   drawFog();
   if(glitchIntensity>0.02) drawGlitch();
