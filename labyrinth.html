@@ -3570,7 +3570,7 @@ function floorTiles(){
 }
 // Floor tiles with 2×2 clearance — cached, rebuilt on maze/wall change
 var _comp2x2Cache=null;
-function invalidateFloorCache(){ _floorTiles2x2Cache=null; _comp2x2Cache=null; }
+function invalidateFloorCache(){ _floorTiles2x2Cache=null; _comp2x2Cache=null; _exitPathGen++; } // also stales the player→exit path cache (P3)
 function floorTiles2x2(){
   if(_floorTiles2x2Cache) return _floorTiles2x2Cache;
   const ft=[];
@@ -3709,26 +3709,44 @@ function repairEnemyGraph(){
 function astar(sr,sc,er,ec,avoidSet=null,trapPenalty=false,size=1,costFn=null){
   const key=(r,c)=>r*COLS+c;
   const h=(r,c)=>md(r,c,er,ec);
-  // Priority queue via Map sorted on access (small enough grid)
-  const open=new Map();
+  // Binary min-heap on f — replaces the O(V) Map scan per pop (AUDIT P3).
+  // Superseded entries are left in the heap and skipped on pop (lazy deletion).
+  const heap=[];
+  const push=n=>{
+    heap.push(n);let i=heap.length-1;
+    while(i>0){const p=(i-1)>>1;if(heap[p].f<=heap[i].f)break;const t=heap[p];heap[p]=heap[i];heap[i]=t;i=p;}
+  };
+  const pop=()=>{
+    const top=heap[0],last=heap.pop();
+    if(heap.length){
+      heap[0]=last;let i=0;
+      for(;;){
+        const l=2*i+1,r=2*i+2;let s=i;
+        if(l<heap.length&&heap[l].f<heap[s].f)s=l;
+        if(r<heap.length&&heap[r].f<heap[s].f)s=r;
+        if(s===i)break;const t=heap[s];heap[s]=heap[i];heap[i]=t;i=s;
+      }
+    }
+    return top;
+  };
   const gScore=new Map();
   const cameFrom=new Map();
   const start=key(sr,sc);
   gScore.set(start,0);
-  open.set(start,{r:sr,c:sc,f:h(sr,sc)});
+  push({k:start,r:sr,c:sc,f:h(sr,sc)});
   const closed=new Set();
-  while(open.size){
-    let best=null,bestF=Infinity;
-    for(const[k,v] of open)if(v.f<bestF){bestF=v.f;best=k;}
-    const{r,c}=open.get(best);
+  while(heap.length){
+    const cur=pop();
+    if(closed.has(cur.k)) continue; // stale entry — a cheaper route got here first
+    const{r,c}=cur,best=cur.k;
     if(r===er&&c===ec){
-      const path=[];let cur=best;
-      while(cameFrom.has(cur)){
-        const[pr2,pc2]=cameFrom.get(cur);path.unshift([pr2,pc2]);cur=key(pr2,pc2);
+      const path=[];let node=best;
+      while(cameFrom.has(node)){
+        const[pr2,pc2]=cameFrom.get(node);path.unshift([pr2,pc2]);node=key(pr2,pc2);
       }
       path.push([er,ec]);return path;
     }
-    open.delete(best);closed.add(best);
+    closed.add(best);
     for(const[dr,dc] of[[0,1],[0,-1],[1,0],[-1,0]]){
       const nr=r+dr,nc=c+dc;
       const passable=size===2?wk2x2(nr,nc):wk(nr,nc);
@@ -3745,11 +3763,27 @@ function astar(sr,sc,er,ec,avoidSet=null,trapPenalty=false,size=1,costFn=null){
       const nk=key(nr,nc);
       if(ng<(gScore.get(nk)??Infinity)){
         gScore.set(nk,ng);cameFrom.set(nk,[r,c]);
-        open.set(nk,{r:nr,c:nc,f:ng+h(nr,nc)});
+        push({k:nk,r:nr,c:nc,f:ng+h(nr,nc)});
       }
     }
   }
   return null;
+}
+
+// ── Cached player→exit route (AUDIT P3) ──
+// The status bar's mined-path check, the WARDEN pack role, and the pace ghost
+// all want "the player's current escape route"; recomputing it per frame was
+// the biggest CPU sink on late-game mazes. Recompute only when the player
+// changes cell or the maze changes (invalidateFloorCache covers every grid
+// mutation: dig, dynamite, bruiser charge, secret doors, init/restore).
+let _exitPathCache=null,_exitPathKey=-1,_exitPathGen=0,_exitPathCachedGen=-1;
+function playerExitPath(){
+  if(!P) return null;
+  const k=P.r*COLS+P.c;
+  if(k===_exitPathKey&&_exitPathCachedGen===_exitPathGen) return _exitPathCache;
+  _exitPathKey=k;_exitPathCachedGen=_exitPathGen;
+  _exitPathCache=astar(P.r,P.c,EXIT.r,EXIT.c);
+  return _exitPathCache;
 }
 
 // Find nearest tile to (tr,tc) that satisfies wk2x2 — used as enemy hunt target
@@ -3792,7 +3826,7 @@ function packTarget(E){
     return nearestValid2x2(P.r,P.c,E.r,E.c);
   }
   // WARDEN: midpoint of the player's A* route to the exit — deny the escape
-  const ep=astar(P.r,P.c,EXIT.r,EXIT.c)||[];
+  const ep=playerExitPath()||[]; // cached — recomputed only on cell/grid change (P3)
   if(ep&&ep.length>6){
     const idx=Math.min(ep.length-1,Math.max(6,Math.floor(ep.length*0.45)));
     const node=ep[idx];
@@ -5685,7 +5719,7 @@ function movePlayer(dt){
     if(phase==='PLAY'&&_runPath.length<REPLAY_PATH_CAP)
       _runPath.push([Math.round(performance.now()-_runStartTs),P.r,P.c]); // Ghost Replay record
     saveRunState(); // mid-run autosave — internally throttled to one write per 2.5s
-    if(_paceBest){const _pp=astar(P.r,P.c,EXIT.r,EXIT.c);if(_pp)_paceCurDist=_pp.length;}
+    if(_paceBest){const _pp=playerExitPath();if(_pp)_paceCurDist=_pp.length;}
 
     // Enemy mine
     if(traps.some(t=>t.r===P.r&&t.c===P.c&&t.owner==='enemy')){
@@ -7234,7 +7268,7 @@ function update(dt){
   const nearDist=ne?md(P.r,P.c,ne.r,ne.c):99;
   const anyStunned=enemies.some(e=>e.alive&&e.stunned);
   // (endless: skip — no exit to path toward, and the per-frame A* is pure waste there)
-  const hasMineOnPath=!endlessMode&&traps.some(t=>t.owner==='enemy'&&astar(P.r,P.c,EXIT.r,EXIT.c)?.some(([r,c])=>r===t.r&&c===t.c));
+  const hasMineOnPath=!endlessMode&&traps.some(t=>t.owner==='enemy'&&playerExitPath()?.some(([r,c])=>r===t.r&&c===t.c));
   const _danger=!anyStunned&&nearDist<=6;
   document.getElementById('sStatus').textContent=
     anyStunned?'MINOTAUR STUNNED':
