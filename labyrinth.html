@@ -1471,7 +1471,7 @@ const HUNTER_CLASSES=[
   {id:'tactician', unlock:20000, icon:'💣', name:'TACTICIAN'},
   {id:'blind',     unlock:25000, icon:'🙈', name:'BLIND ONE'},
 ];
-const HUNTER_UNLOCK_MIN=HUNTER_CLASSES[0].unlock; // 25k opens the mode at all
+const HUNTER_UNLOCK_MIN=HUNTER_CLASSES[0].unlock; // first rung opens the mode at all
 function profileHighScore(){ const p=getActiveProfile(); return (p&&p.highScore)||0; }
 // Returns the list of class ids unlocked at a given highScore (always score-ordered).
 function hunterClassesUnlocked(hs){ return HUNTER_CLASSES.filter(c=>hs>=c.unlock).map(c=>c.id); }
@@ -1511,7 +1511,7 @@ let _preyKnownER=-1, _preyKnownEC=-1, _preyLostSightAt=-Infinity; // last hunter
 let _preyVisited=[]; // recent grid cells (anti-backtrack for explore mode)
 let _preyGear=[]; // powerups/perks the prey spawned with this round (shown in HUD)
 // Competence scales with the profile's earned highScore (the same ladder that unlocks
-// the classes): dim at 25k, razor-sharp by 45k. A light warden term tints it so a more
+// the classes): dim at the 5k entry, razor-sharp by the 25k full roster. A light warden term tints it so a more
 // active profile breeds slightly sharper prey ("you hunt a ghost of your own habits").
 function preySkill(){
   let s=clamp((profileHighScore()-HUNTER_UNLOCK_MIN)/20000, 0.15, 1);
@@ -3988,7 +3988,11 @@ function initGame(){
   // the identical maze. Restored to Math.random once generation completes.
   if(dailyMode) _rand=mulberry32(hashStr('LABYRINTH:'+_dailyDate));
   updateMazeSize();
-  activeMod=(!dailyMode&&tier>=5&&totalRuns>=25)?ASCENSION_MODS[totalRuns%ASCENSION_MODS.length]:null;
+  // Ascension never fires in dailies (G15) or Hunter Mode (hunterNextRound fakes
+  // tier/totalRuns for difficulty ramp — deep hunts would trip the >=25 gate and
+  // e.g. SWIFT DEATH would buff the HUMAN hunter). Ironman lives keep it: a 25-win
+  // life at tier V has earned the rites.
+  activeMod=(!dailyMode&&!hunterMode&&tier>=5&&totalRuns>=25)?ASCENSION_MODS[totalRuns%ASCENSION_MODS.length]:null;
   invalidateFloorCache();
   resizeCanvas();buildPalette();
   projectiles=[];traps=[];items=[];powerupItems=[];activePowerups=[];
@@ -4537,7 +4541,17 @@ function togglePause(force){
   if(phase!=='PLAY'&&!(force===false)) return;
   pauseOpen=(force!==undefined)?force:!pauseOpen;
   document.getElementById('pauseOv').style.display=pauseOpen?'flex':'none';
-  if(pauseOpen){aimMode=false;cancelDefuse();cancelHide();saveRunState(true);}
+  if(pauseOpen){
+    aimMode=false;cancelDefuse();cancelHide();saveRunState(true);
+    // The autosave promise only holds for normal runs — isolated modes can't resume
+    try{
+      document.getElementById('pauseNote').textContent=
+        hunterMode?'QUITTING ABANDONS THE HUNT':
+        ironmanMode?'ONE LIFE — QUITTING ABANDONS IT':
+        dailyMode?'ONE ATTEMPT — QUITTING FORFEITS IT':
+        'YOUR RUN IS SAVED AUTOMATICALLY';
+    }catch(e){}
+  }
 }
 var _bpSelected=null; // weapon awaiting slot assignment
 
@@ -7710,13 +7724,17 @@ function drawFog(){
   fogCtx.fillRect(0,0,w,h);
   fogCtx.restore();
 
-  // Hunter Mode: scent trail (recent prey footprints) + sighting glow when spotted
+  // Hunter Mode: scent trail (recent prey footprints) + sighting glow when spotted.
+  // 'shadow' prey gear (depth 6+) suppresses scent — footprints fade 8s → 3s and the
+  // sighting halo 4s → 1.5s (the prey analog of the player's shadow powerup).
   if(hunterMode&&P&&P.alive){
     const bleed=4, nowTs=performance.now();
-    // Faint red footprint dots at recent prey cell positions, fading over 8 s
+    const shadowGear=_preyGear.includes('shadow');
+    const trailLife=shadowGear?3000:8000;
+    // Faint red footprint dots at recent prey cell positions, fading out
     fogCtx.save(); fogCtx.globalCompositeOperation='source-over';
     for(const pt of _preyTrail){
-      const age=(nowTs-pt.t)/8000; if(age>=1) continue;
+      const age=(nowTs-pt.t)/trailLife; if(age>=1) continue;
       const ptx=tx(pt.c)-camX+bleed, pty=ty(pt.r)-camY+bleed;
       fogCtx.globalAlpha=(1-age)*0.6;
       fogCtx.fillStyle='rgba(220,60,60,0.9)';
@@ -7724,11 +7742,12 @@ function drawFog(){
     }
     fogCtx.restore();
     // Pulsing red halo at prey world position when the human minotaur recently had LOS
+    const sightLife=shadowGear?1500:4000;
     const sightAge=nowTs-_preySightedAt;
-    if(sightAge<4000){
+    if(sightAge<sightLife){
       const px=P.rx-camX+bleed, py=P.ry-camY+bleed;
       const pulse=0.5+0.5*Math.sin(nowTs/180);
-      const fadeOut=Math.max(0,1-sightAge/4000);
+      const fadeOut=Math.max(0,1-sightAge/sightLife);
       fogCtx.save(); fogCtx.globalCompositeOperation='source-over';
       fogCtx.globalAlpha=0.7*pulse*fadeOut;
       const grd=fogCtx.createRadialGradient(px,py,0,px,py,T*1.3);
@@ -8162,12 +8181,16 @@ function wireOvButtons(){
   document.getElementById('pbHowTo').addEventListener('click',_ph);
   document.getElementById('pbHowTo').addEventListener('touchend',e=>{e.preventDefault();_ph();},{passive:false});
   function _pq(){
-    const wasHunter=hunterMode; // capture BEFORE abandonHunter() clears the flag
+    // Capture BEFORE the abandon calls clear the flags: once they're down,
+    // saveRunState()'s isolation gate no longer knows this world was a
+    // hunter/ironman run and would happily persist it as a NORMAL run save.
+    const wasIsolated=hunterMode||ironmanMode||dailyMode;
     abandonIronman(); // quitting an Ironman life abandons it (no board post) + restores progression
     abandonHunter();  // same for a Hunter run — _hmRestore() already clears the save
-    // Hunter runs can never be resumed: _hmRestore cleared the save, nothing to write.
+    if(dailyMode){ dailyMode=false; _dailyDate=null; } // quit forfeits the daily (attempt burned at start)
+    // Isolated modes can never be resumed — never leave their world on disk.
     // Normal runs: persist the current in-progress state for the CONTINUE RUN button.
-    if(!wasHunter) saveRunState(true);
+    if(wasIsolated) clearRunSave(); else saveRunState(true);
     togglePause(false);
     setGameControlsActive(false);
     phase='MENU';

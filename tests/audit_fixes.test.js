@@ -67,6 +67,34 @@ test('B9: restore relocates a player entombed in a re-sealed secret door', () =>
   assert(g2.eval('P.rx===tx(P.c)&&P.ry===ty(P.r)'), 'pixel position follows the relocation');
 });
 
+test('QUIT LEAK: quitting an Ironman life must not leave a resumable normal-run save', () => {
+  const g = createGame({ seed: 41 });
+  g.eval('highScore=12000; tier=5; totalRuns=25; score=11250; gold=300; syncProfileFromGame(); saveProfiles();');
+  assertEq(g.eval('startIronmanRun()'), true);
+  assertEq(g.eval('phase'), 'PLAY');
+  // Quit from the pause menu — the real button handler
+  g.document.getElementById('pbQuit').dispatch('click');
+  assertEq(g.eval('ironmanMode'), false, 'life abandoned');
+  assertEq(g.eval('score'), 11250, 'profile progression restored');
+  assertEq(g.eval('hasRunSave()'), false,
+    'the abandoned Ironman world must NOT be saved as a resumable normal run');
+});
+
+test('QUIT LEAK: quitting a Daily resets dailyMode for subsequent normal runs', () => {
+  const g = createGame({ seed: 42 });
+  assertEq(g.eval('startDailyRun()'), true);
+  assertEq(g.eval('dailyMode'), true);
+  g.document.getElementById('pbQuit').dispatch('click');
+  assertEq(g.eval('dailyMode'), false, 'quit must clear dailyMode');
+  assertEq(g.eval('_dailyDate'), null, 'quit must clear the daily date');
+  assertEq(g.eval('hasRunSave()'), false, 'a daily is never resumable');
+  // A fresh normal run after the quit earns gold again (not "GOLD STAYS IN THE GAUNTLET")
+  g.eval('initGame()');
+  const goldBefore = g.eval('gold');
+  g.eval('addGold(50)');
+  assertEq(g.eval('gold'), goldBefore + 50, 'normal-run gold flows again after a daily quit');
+});
+
 test('B13: user names are HTML-escaped when rendered', () => {
   const g = createGame({ seed: 13 });
   assertEq(g.eval(`esc('<img src=x onerror=alert(1)>')`),
