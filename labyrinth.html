@@ -1101,6 +1101,8 @@ let stunTimer=0,stunMax=0;
 // defuse state
 let defusing=false,defuseTimer=0,defuseTarget=null;
 const DEFUSE_TIME=2000;
+// Perk-adjusted hold time — the update loop AND the canvas ring must share this (B2)
+function defuseNeededMs(){return (P.perks&&P.perks.quickDefuse?DEFUSE_TIME*0.5:DEFUSE_TIME)*permSteadyMult();}
 let eKeyHeld=false;
 // hide mine state — after placing a mine, player can hold fire for 2s to hide it
 let hidingMine=false,hideTimer=0,hideTarget=null,hideGrace=0;
@@ -2103,6 +2105,18 @@ function restoreRun(){
     activePowerups=data.ap.map(a=>({type:a.t,timeLeft:a.tl,totalTime:a.tt}));
     // Player
     P.r=data.p.r;P.c=data.p.c;P.rx=tx(P.c);P.ry=ty(P.r);
+    // B9: if the run was saved while the player stood inside an OPEN secret door,
+    // the re-seal above just entombed them — relocate to the nearest walkable tile
+    if(!wk(P.r,P.c)){
+      outer:
+      for(let rad=1;rad<Math.max(ROWS,COLS);rad++){
+        for(let dr=-rad;dr<=rad;dr++) for(let dc=-rad;dc<=rad;dc++){
+          if(Math.max(Math.abs(dr),Math.abs(dc))!==rad) continue; // ring perimeter only
+          const rr=P.r+dr, cc=P.c+dc;
+          if(inB(rr,cc)&&wk(rr,cc)){ P.r=rr;P.c=cc;P.rx=tx(cc);P.ry=ty(rr); break outer; }
+        }
+      }
+    }
     P.spawnR=P.r;P.spawnC=P.c; // resume point is the new origin for movement gates
     P.hp=data.p.hp;P.hpFrac=data.p.hpf||0;P.dir=data.p.dir||'down';
     exitLocked=!!(data.lock&&data.lock.on); // overrides whatever initGame rolled
@@ -2641,6 +2655,10 @@ function openLeaderboard(onClose){
 }
 let _lbReturnFn=null;
 
+// B13: user-typed names must never reach innerHTML raw (self-XSS today,
+// stored XSS the day a shared leaderboard lands). Escape at render.
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+
 function renderLeaderboard(){
   const board=getLeaderboard();
   const activeId=activeProfileId;
@@ -2656,8 +2674,8 @@ function renderLeaderboard(){
     return `<div class="lb-row ${isTop?'lb-top':''} ${isMe?'lb-mine':''}">
       <div class="lb-rank">${medals[i]||`#${i+1}`}</div>
       <div class="lb-names">
-        ${(e.playerName&&e.playerName!==e.profileName)?`<div class="lb-player">${e.playerName}</div>`:''}
-        <div class="lb-profile">${e.profileName||e.playerName||'HERO'}</div>
+        ${(e.playerName&&e.playerName!==e.profileName)?`<div class="lb-player">${esc(e.playerName)}</div>`:''}
+        <div class="lb-profile">${esc(e.profileName||e.playerName||'HERO')}</div>
         <div class="lb-runs">${e.runs||0} RUNS</div>
       </div>
       <div style="text-align:right">
@@ -2719,7 +2737,7 @@ function renderProfiles(expandedId, confirmDeleteId){
     top.innerHTML=
       `<div class="pc-avatar">${avatars[i%avatars.length]}</div>`+
       `<div class="pc-info">`+
-        `<div class="pc-name">${p.profileName||p.playerName||'HERO'}</div>`+
+        `<div class="pc-name">${esc(p.profileName||p.playerName||'HERO')}</div>`+
         `<div class="pc-stats">RUN ${p.totalRuns||0} · ${(p.highScore||0).toLocaleString()} BEST</div>`+
       `</div>`+
       (isActive?'<div class="pc-active">✓ ACTIVE</div>':'');
@@ -5889,10 +5907,10 @@ function applySlayerHit(E){
 }
 
 function stunEnemy(E,ms,reason){
+  if(!E||!E.alive) return; // guard FIRST — dead/null targets must not count (B8)
   // Achievement: stun by variant
   const vid=E.variant||'classic';
   achProgress('stun_'+vid);
-  if(!E||!E.alive) return;
   _runWarden.stuns++;
   // interrupting a defuse lets the mine survive — and restores the normal move cadence
   E._defuseTarget=null;
@@ -6846,7 +6864,7 @@ function update(dt){
       cancelDefuse(); // released button
     } else {
       defuseTimer+=dt;
-      const defuseNeeded=(P.perks&&P.perks.quickDefuse?DEFUSE_TIME*0.5:DEFUSE_TIME)*permSteadyMult();
+      const defuseNeeded=defuseNeededMs();
       const pct=defuseTimer/defuseNeeded;
       document.getElementById('defuseFill').style.width=(pct*100)+'%';
       // Live countdown number
@@ -7282,7 +7300,7 @@ function drawTraps(){
     ctx.beginPath();ctx.arc(x,y-T*.12,T*.08,0,Math.PI*2);ctx.fill();
     if(defuseTarget===trap&&defusing){
       ctx.strokeStyle='rgba(180,100,220,0.9)';ctx.lineWidth=2;
-      ctx.beginPath();ctx.arc(x,y,T*.45,0,Math.PI*2*(defuseTimer/DEFUSE_TIME));ctx.stroke();
+      ctx.beginPath();ctx.arc(x,y,T*.45,0,Math.PI*2*Math.min(1,defuseTimer/defuseNeededMs()));ctx.stroke();
     }
     if(owned){
       ctx.fillStyle=`rgba(255,100,100,${0.7*pulse})`;
