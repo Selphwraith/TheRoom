@@ -36,10 +36,10 @@ bug is repaired, so the suite tells you when you're done.
 10. ✅ **P4 — viewport culling.** SHIPPED 2026-06-11: `drawMaze` clamps to camera
     bounds (+1 tile shake pad); items, traps, powerups and enemies skip offscreen
     draws via `onScreen()`. ~18× overdraw cut at the 87×67 cap.
-11. **B2, B3, B8, B9** — four small correctness fixes: defuse ring uses `defuseNeeded`
-    (`:5761`); `_runMoveTime += dt/1000` (`:4259`); move achievement call below the alive
-    guard in `stunEnemy` (`:4666`); after `restoreRun` re-seals doors, relocate the player
-    if `!wk(P.r,P.c)`.
+11. ✅ **B2, B3, B8, B9** — SHIPPED (B3 earlier; B2/B8/B9 + B13 on 2026-07-02): defuse
+    ring shares `defuseNeededMs()`; `_runMoveTime += dt/1000`; achievement call below the
+    alive guard in `stunEnemy`; `restoreRun` relocates an entombed player; names escaped
+    at render. Tests: `audit_fixes.test.js`.
 
 ## P2 — design-level (plan before coding)
 
@@ -69,7 +69,9 @@ bug is repaired, so the suite tells you when you're done.
     👻 split in the status bar) rather than a literal dot: mazes differ per run, so a
     drawn ghost would walk through walls. A literal replay dot remains a natural
     follow-up for dailies once multi-day daily history exists.
-18. Merchant contracts — still open, next in line.
+18. ✅ Merchant contracts — SHIPPED (2 of 5 offered at the shop, gold-only payouts,
+    suspend/resume-safe; tests in `contracts_test.js`). This line was stale — the
+    feature landed with the game-modes batch but the doc was never updated.
 19. NEW (shipped beyond the original list): The Warden Remembers (adaptive enemy
     composition), keyed exits, run stats + share strings, Ascension modifiers (tier 6+).
 
@@ -106,6 +108,28 @@ bug is repaired, so the suite tells you when you're done.
   saves. Tests: `roadmap.test.js :: LAUNCH FIX` (form / identity / leaderboard).
 - Versions: desktop 1.0.1, Android versionCode 2 / versionName 1.0.1 (artifacts
   rebuilt in place — 1.0.1 was never published, so no version bump needed).
+
+## 2026-07-02 session — ✅ shipped (repo re-audit + Endless)
+
+- **Last four open AUDIT bugs fixed** (B2 defuse ring, B8 stun-ach guard, B9 restore
+  entombment, B13 name escaping) — regression tests in `tests/audit_fixes.test.js`.
+- **Mode-isolation leaks fixed:** Ironman quit no longer writes the abandoned life as
+  a resumable NORMAL run; Daily quit now resets `dailyMode` (previously every later
+  run that session silently ran under daily rules); Ascension no longer fires in deep
+  Hunter runs; prey 'shadow' gear (depth 6+) now actually suppresses scent; pause note
+  is mode-aware.
+- **ENDLESS SIEGE shipped** — the last mode from GAME_MODES.md. Unlock 15k highScore.
+  No exit (tile inert + not drawn), tier-III arena, waves via `pickWardenVariants` up
+  to 7 hunters, 30s quicken ticks (moveDur ×0.94, floor 45%), 60s weapon / 90s powerup
+  supply drops with compass hints, camping >3s fast-forwards all director clocks 2.5×,
+  score = seconds survived on its own board (`labyrinth_leaderboard_endless`). Full
+  isolation (G15 gates). Tests in `tests/endless_test.js`.
+
+## Still open (carried forward)
+
+9.  **P3 — A\* off the render path** (unchanged, see above).
+14. **Dead code sweep** (unchanged, see above).
+- How-To has no ENDLESS SIEGE section yet (button + toasts carry it for now).
 
 ## Testing backlog (coverage gaps from AUDIT §6)
 

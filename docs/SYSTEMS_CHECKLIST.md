@@ -47,7 +47,7 @@ catch = 4-corner pixel check `catchR=0.8T` ✅ (implicitly) · shooting on LOS �
 | Continuous movement, per-axis wall slide | `movePlayer :4227` | ✅ tested |
 | Joystick (analog, dead zone 0.22) | `:5095` | ✅ live path; 🔧 A2 dead legacy tick |
 | Fire (weapons only) | `playerFire :4455` | ✅ |
-| Interact: defuse → dig → camouflage | `playerInteract :4540` | ⚠ B2 ring desync (B1 fixed — toast now says HOLD E) |
+| Interact: defuse → dig → camouflage | `playerInteract :4540` | ✅ (B1+B2 fixed — toast says HOLD E, ring shares `defuseNeededMs()`) |
 | Mine camouflage (2 s hold, resets on release) | `:5316-5360` | ✅ A* treats hidden mines as floor |
 | Defuse (2 s hold, cancel on move) | `:5362-5383` | ✅ |
 | Pickaxe dig (2.5 s hold) | `:5384-5411` | ✅ |
@@ -71,9 +71,9 @@ enemies) · Aegis rare (30%/run): +1 HP + haste ✅.
 | Shop: 11 items, one-run perks | ✅ purchase lifecycle tested |
 | Perm perks: 7 defs, level-up every 3 wins, stack caps | ✅ math tested |
 | Profiles: 3 free slots, per-profile everything except achievements | ✅ ; A5 "unlock more" stub; T4 orphaned keys on delete |
-| Achievements: 40 defs in 6 categories, global | ✅ thresholds/composites/popup tested, B4 ARSENAL fixed; ⚠ B8 pre-guard count, T6 survival only on win |
-| Leaderboard: top-20 stored / top-10 shown, best per profile | ✅ |
-| Mid-run save/restore (per profile) | ✅ round-trip tested, autosaves on cell change (A6), all trap kinds + hpFrac saved (B7); ⚠ B9 door entombment |
+| Achievements: 40 defs in 6 categories, global | ✅ thresholds/composites/popup tested, B4 ARSENAL + B8 pre-guard count fixed; T6 survival only on win |
+| Leaderboard: top-20 stored / top-10 shown, best per profile | ✅ names escaped at render (B13) |
+| Mid-run save/restore (per profile) | ✅ round-trip tested, autosaves on cell change (A6), all trap kinds + hpFrac saved (B7), entombed player relocated (B9) |
 | Treasure vault (sealed room, rich loot, slayer 5%) | ✅ generation; loot distribution untested |
 | Secret doors (tier-count, long-detour placement) | generation ✅; runtime cycle untested |
 
@@ -88,6 +88,15 @@ enemies) · Aegis rare (30%/run): +1 HP + haste ✅.
 | Daily Gauntlet | date-seeded generation (identical maze for everyone), tier locked III, perm/shop perks neutralized, loaner club+bow, gold stays in the gauntlet, one attempt burned at start, no suspends, zero progression impact, result + share on finish | ✅ |
 | Pace ghost | per-bracket best clear time on profile (`ghosts`), 👻 ±s split in status bar, NEW BEST PACE toast, neutral on restore and in dailies | ✅ |
 | Ascension (tier 6+) | at ≥25 wins on tier V, rotating per-run modifier (`totalRuns % 5`): FADING LIGHT, VEILED MINES, TWIN WARDENS, SWIFT DEATH, SEALED EXIT; banner toast, status icon, share line; never in dailies | ✅ |
+
+## Game modes (all isolated per G15 — own leaderboard slice, zero profile impact)
+
+| Mode | Unlock (highScore) | Status |
+|---|---|---|
+| Daily Gauntlet | always | ✅ tested (roadmap.test.js); quit now resets dailyMode |
+| Hunter Mode | 5k–25k class ladder | ✅ tested (hunter_test.js); shadow gear + Ascension gate fixed 2026-07-02 |
+| Ironman | 10,000 | ✅ tested (ironman_test.js); quit no longer leaves a resumable save |
+| Endless Siege | 15,000 | ✅ SHIPPED 2026-07-02, tested (endless_test.js) — no exit, waves, quickens, drops, camping penalty |
 
 ## Presentation (untestable headlessly — verify in browser)
 

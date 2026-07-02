@@ -1184,7 +1184,7 @@ function defaultProfile(playerName='PLAYER', profileName='HERO'){
 }
 
 function saveProfiles(){
-  if(ironmanMode||hunterMode) return; // isolated modes never write profile progression
+  if(ironmanMode||hunterMode||endlessMode) return; // isolated modes never write profile progression
   try{ localStorage.setItem(PROFILES_KEY,JSON.stringify(profiles)); }catch(e){}
 }
 
@@ -1258,7 +1258,7 @@ function applyProfileToGame(){
 }
 
 function syncProfileFromGame(){
-  if(ironmanMode||hunterMode) return; // isolated modes don't touch profile progression
+  if(ironmanMode||hunterMode||endlessMode) return; // isolated modes don't touch profile progression
   const p=getActiveProfile();
   p.score=score; p.totalRuns=totalRuns;
   p.tier=tier; p.highScore=highScore;
@@ -1842,6 +1842,180 @@ function openHunterSelect(){
 }
 
 // ═══════════════════════════════════════
+// ENDLESS SIEGE — no exit, escalating waves, score = seconds survived
+// The last mode from GAME_MODES.md. Same isolation contract as Ironman/Hunter
+// (G15): snapshot the profile's progression, run the siege on the globals,
+// restore on end/abandon. Never resumable; own leaderboard slice.
+// Anti-camping per the design note: the longer you hold one spot, the faster
+// every director clock (waves / quickens / drops) runs.
+// ═══════════════════════════════════════
+let endlessMode=false,_esSnap=null;
+let _esWaves=0,_esQuickens=0,_esNextWaveAt=0,_esNextDropAt=0,_esNextPuAt=0,_esNextQuickenAt=0,_esStillWarnAt=0;
+const ENDLESS_LB_KEY='labyrinth_leaderboard_endless';
+const ENDLESS_UNLOCK_MIN=15000; // highScore gate — between Ironman (10k) and Hunter's full roster (25k)
+const ENDLESS_MAX_ENEMIES=7;    // A* budget cap — waves keep coming, hunters don't stack past this
+function endlessUnlocked(){ const p=getActiveProfile(); return !!(p&&(p.highScore||0)>=ENDLESS_UNLOCK_MIN); }
+function endlessBest(){
+  try{ const p=getActiveProfile(); const e=JSON.parse(localStorage.getItem(ENDLESS_LB_KEY)||'[]').find(x=>x.profileId===p.id); return e?e.score:0; }
+  catch(e){ return 0; }
+}
+function endlessBtnHTML(){
+  if(!endlessUnlocked()) return '';
+  const best=endlessBest();
+  const label=best>0?('⏳ ENDLESS — BEST '+best+'s'):'⏳ ENDLESS SIEGE';
+  return `<button id="btnEndless" style="margin-top:4px;padding:7px 20px;background:transparent;border:1px solid rgba(120,200,160,.55);color:#9fe0c0;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;cursor:pointer;border-radius:3px;">${label}</button>`;
+}
+function submitEndlessEntry(sc,waves){
+  try{
+    const p=getActiveProfile();
+    let board=JSON.parse(localStorage.getItem(ENDLESS_LB_KEY)||'[]');
+    const idx=board.findIndex(e=>e.profileId===p.id);
+    if(idx>=0){ if(sc>board[idx].score){ board[idx].score=sc; board[idx].waves=waves; board[idx].ts=Date.now(); } }
+    else board.push({profileId:p.id,profileName:p.profileName,playerName:p.playerName,score:sc,waves:waves,ts:Date.now()});
+    board.sort((a,b)=>b.score-a.score); board=board.slice(0,20);
+    localStorage.setItem(ENDLESS_LB_KEY,JSON.stringify(board));
+  }catch(e){}
+}
+function _esRestore(){
+  if(_esSnap){ score=_esSnap.score;tier=_esSnap.tier;totalRuns=_esSnap.totalRuns;
+               runs=_esSnap.runs;gold=_esSnap.gold;highScore=_esSnap.highScore; _esSnap=null; }
+  endlessMode=false;
+  _esWaves=0;_esQuickens=0;_esStillWarnAt=0;
+  clearRunSave(); // sieges can never be resumed
+}
+function abandonEndless(){ if(endlessMode) _esRestore(); }
+function startEndlessRun(){
+  if(endlessMode) return false;
+  if(!endlessUnlocked()){ showToast('⏳ ENDLESS SIEGE UNLOCKS AT '+ENDLESS_UNLOCK_MIN.toLocaleString()+' HIGH SCORE',2200); return false; }
+  _esSnap={score,tier,totalRuns,runs,gold,highScore};
+  endlessMode=true;
+  tier=3; totalRuns=10; score=0; runs=0; gold=0; // mid-size arena at tier-III pace — escalation does the rest
+  pendingPerks={};pendingLoadout=[];pendingContracts=[];runContracts=[];
+  try{document.getElementById('ov').style.display='none';}catch(e){}
+  initGame();
+  // There is no way out: the exit check is gated off in movePlayer, so a rolled
+  // key-lock is meaningless noise — clear it and remove the key from the floor.
+  exitLocked=false; if(P) P.hasExitKey=false;
+  items=items.filter(it=>it.type!=='exitkey');
+  _paceBest=0; // no pace ghost — there is nothing to pace toward
+  _esWaves=0;_esQuickens=0;_esStillWarnAt=0;
+  const t0=performance.now();
+  _esNextWaveAt=t0+60000; _esNextDropAt=t0+60000; _esNextPuAt=t0+90000; _esNextQuickenAt=t0+30000;
+  for(const E of enemies) E._esFloor=Math.round(E.moveDur*0.45); // quicken never passes 45% of base
+  showToast('⏳ ENDLESS SIEGE — SURVIVE. THERE IS NO EXIT.',2600);
+  return true;
+}
+// A new hunter enters the maze. The Warden picks WHO (adaptive composition —
+// the wave story is flavored by this profile's habits, per the design note).
+function endlessSpawnEnemy(){
+  if(enemies.filter(e=>e.alive).length>=ENDLESS_MAX_ENEMIES) return;
+  const vid=(pickWardenVariants(1)||[])[0]||'classic';
+  const _domC=dominantComp2x2();
+  const inVault=(r,c)=>!!(vaultRect&&r>=vaultRect.r0-1&&r<=vaultRect.r1+1&&c>=vaultRect.c0-1&&c<=vaultRect.c1+1);
+  const cands=floorTiles2x2().filter(([r,c])=>
+    md(r,c,P.r,P.c)>=12&&(_domC<0||comp2x2(r,c)===_domC)&&!inVault(r,c)&&
+    !enemies.some(e=>e.alive&&md(r,c,e.r,e.c)<6));
+  if(!cands.length) return;
+  const[sr,sc]=cands[ri(0,cands.length-1)];
+  const E=makeEnemy(sr,sc,vid);
+  E._esFloor=Math.round(E.moveDur*0.45);
+  E.moveDur=Math.max(E._esFloor,Math.round(E.moveDur*Math.pow(0.94,_esQuickens))); // late arrivals inherit the quickens
+  enemies.push(E);
+  _esWaves++;
+  updateRosterDisplay();
+  shk=Math.max(shk,8);
+  showToast('🐂 '+((E.vDef&&E.vDef.name)||'A HUNTER')+' JOINS THE SIEGE',2000);
+}
+// Compass-style hint so drops PULL the player around the maze (anti-camping)
+function _esDirHint(r,c){
+  const dr=r-P.r,dc=c-P.c;
+  if(Math.abs(dr)>2&&Math.abs(dc)>2) return '('+(dr>0?'S':'N')+(dc>0?'E':'W')+')';
+  return '('+(Math.abs(dr)>Math.abs(dc)?(dr>0?'S':'N'):(dc>0?'E':'W'))+')';
+}
+function endlessDrop(kind){
+  const inVault=(r,c)=>!!(vaultRect&&r>=vaultRect.r0&&r<=vaultRect.r1&&c>=vaultRect.c0&&c<=vaultRect.c1);
+  const spots=floorTiles().filter(([r,c])=>{
+    const d=md(r,c,P.r,P.c);
+    if(d<8||d>24) return false;
+    if(inVault(r,c)) return false;
+    if(r===EXIT.r&&c===EXIT.c) return false;
+    if(items.some(it=>it.r===r&&it.c===c)) return false;
+    if(powerupItems.some(p=>p.r===r&&p.c===c)) return false;
+    if(traps.some(t=>t.r===r&&t.c===c)) return false;
+    return true;
+  });
+  // Reachability: try a few random spots, keep the first the player can path to
+  let pick=null;
+  for(let i=0;i<5&&spots.length;i++){
+    const cand=spots[ri(0,spots.length-1)];
+    if(astar(P.r,P.c,cand[0],cand[1],null,false,1)){ pick=cand; break; }
+  }
+  if(!pick) return;
+  const[r,c]=pick;
+  if(kind==='weapon'){
+    const pool=['bow','xbow','mine','knife','torch','noisemaker','dynamite','stunbow'];
+    const wtype=pool[ri(0,pool.length-1)];
+    items.push({r,c,type:wtype,def:WEAPONS[wtype]});
+    showToast('⚔ SUPPLY DROP '+_esDirHint(r,c)+' — '+WEAPONS[wtype].name,1800);
+  } else {
+    const keys=Object.keys(POWERUPS);
+    const t=keys[ri(0,keys.length-1)];
+    powerupItems.push({r,c,type:t,def:POWERUPS[t]});
+    showToast('✨ A BOON MATERIALIZES '+_esDirHint(r,c),1600);
+  }
+}
+// The director — runs every frame from update() while a siege is live.
+function endlessTick(dt){
+  const now=performance.now();
+  // Stillness is death by escalation: camping >3s fast-forwards every clock 2.5×
+  if(playerStillMs()>3000){
+    const push=dt*1.5;
+    _esNextWaveAt-=push;_esNextDropAt-=push;_esNextPuAt-=push;_esNextQuickenAt-=push;
+    if(now-_esStillWarnAt>6000){ _esStillWarnAt=now; showToast('⏳ THE SIEGE QUICKENS WHILE YOU HIDE — MOVE',1600); }
+  }
+  if(now>=_esNextQuickenAt){
+    _esNextQuickenAt=now+30000; _esQuickens++;
+    for(const E of enemies){
+      if(!E.alive) continue;
+      const fl=E._esFloor||(E._esFloor=Math.round(E.moveDur*0.45));
+      E.moveDur=Math.max(fl,Math.round(E.moveDur*0.94));
+      // a defusing enemy parks its true speed in _savedMoveDur — quicken that too
+      if(E._savedMoveDur!=null) E._savedMoveDur=Math.max(fl,Math.round(E._savedMoveDur*0.94));
+    }
+    if(_esQuickens%4===0) showToast('⏳ THE LABYRINTH QUICKENS',1400);
+  }
+  if(now>=_esNextWaveAt){
+    _esNextWaveAt=now+Math.max(30000,75000-_esWaves*5000); // waves come faster as they stack
+    endlessSpawnEnemy();
+  }
+  if(now>=_esNextDropAt){ _esNextDropAt=now+60000; endlessDrop('weapon'); }
+  if(now>=_esNextPuAt){ _esNextPuAt=now+90000; endlessDrop('powerup'); }
+}
+// Death is the only way a siege ends. Post, restore, show the tally.
+function endEndless(reason){
+  const survived=Math.max(1,Math.round((performance.now()-_runStartTs)/1000));
+  const waves=_esWaves, stuns=_runWarden.stuns;
+  submitEndlessEntry(survived,waves);
+  const best=endlessBest();
+  _esRestore();
+  activePowerups=[];try{updatePowerupBar();}catch(e){}
+  _shareText='THE LABYRINTH — ENDLESS SIEGE'+
+    '\n⏳ survived '+survived+'s · 🐂 '+waves+' wave'+(waves===1?'':'s')+' · ⭐ '+stuns+' stun'+(stuns===1?'':'s');
+  const ov=document.getElementById('ov');ov.style.display='flex';
+  ov.innerHTML=
+    `<div class="rune">⏳</div>`+
+    `<h2>THE SIEGE ENDS</h2>`+
+    `<p>${reason?reason+'<br>':''}`+
+    `You survived <span style="color:var(--gold)">${survived}s</span> against ${waves} reinforcement wave${waves===1?'':'s'}.`+
+    `<br><span style="font-size:9px;color:rgba(120,200,160,.8);letter-spacing:2px">⏳ SIEGE BEST: ${best}s</span></p>`+
+    `<button id="btnShare">📋 COPY RESULT</button>`+
+    `<button id="btnEndlessTitle" style="margin-top:6px;padding:7px 20px;background:transparent;border:1px solid rgba(255,255,255,.2);color:var(--dim);font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;cursor:pointer;border-radius:3px;">RETURN TO TITLE</button>`;
+  const go=()=>{ ov.style.display='none'; phase='MENU'; startMusicTrack('menu'); buildTitleScreen(); document.getElementById('ov').style.display='flex'; };
+  const b=document.getElementById('btnEndlessTitle');
+  if(b){ b.addEventListener('click',go); b.addEventListener('touchend',e=>{e.preventDefault();go();},{passive:false}); }
+}
+
+// ═══════════════════════════════════════
 // ACHIEVEMENTS  (global — persist across all profiles)
 // ═══════════════════════════════════════
 const ACH_DEFS=[
@@ -2015,7 +2189,7 @@ function hasRunSave(){try{return !!localStorage.getItem(runSaveKey());}catch(e){
 function clearRunSave(){try{localStorage.removeItem(runSaveKey());}catch(e){}}
 var _lastRunSave=0;
 function saveRunState(force){
-  if(dailyMode||ironmanMode||hunterMode) return; // daily/ironman/hunter can't be suspended — no resume
+  if(dailyMode||ironmanMode||hunterMode||endlessMode) return; // isolated modes can't be suspended — no resume
   if(phase!=='PLAY'||!P||!P.hotbar) return;
   const now=performance.now();
   if(!force&&now-_lastRunSave<2500) return;
@@ -2191,7 +2365,7 @@ function clearProgress(){
 // stillness-countered Blind One.
 // ═══════════════════════════════════════
 function foldWardenStats(won){
-  if(dailyMode||ironmanMode||hunterMode) return; // isolated modes never touch the profile fingerprint
+  if(dailyMode||ironmanMode||hunterMode||endlessMode) return; // isolated modes never touch the profile fingerprint
   try{
     const p=getActiveProfile(); if(!p) return;
     if(!p.warden||typeof p.warden!=='object') p.warden={mines:0,stuns:0,defuses:0,still:0,move:0,fast:0,n:0};
@@ -4549,6 +4723,7 @@ function togglePause(force){
         hunterMode?'QUITTING ABANDONS THE HUNT':
         ironmanMode?'ONE LIFE — QUITTING ABANDONS IT':
         dailyMode?'ONE ATTEMPT — QUITTING FORFEITS IT':
+        endlessMode?'THE SIEGE ENDS ONLY IN DEATH — QUITTING ABANDONS IT':
         'YOUR RUN IS SAVED AUTOMATICALLY';
     }catch(e){}
   }
@@ -5517,8 +5692,10 @@ function movePlayer(dt){
       playSoundAt('mine_explode',1.0,0,P.r,P.c);
       killPlayer('STEPPED ON A MINE');return;
     }
-    // Exit — sealed doors demand the key
-    if(P.r===EXIT.r&&P.c===EXIT.c){
+    // Exit — sealed doors demand the key. The Endless Siege has NO exit:
+    // the tile is inert (not drawn either — see drawExit) and death is the
+    // only way the run ends.
+    if(!endlessMode&&P.r===EXIT.r&&P.c===EXIT.c){
       if(hunterMode){ phase='MENU'; endHunter(false,'THE PREY SLIPPED AWAY'); return; } // prey escaped → you lose
       if(exitLocked&&!P.hasExitKey){
         showToast('🚪 THIS DOOR IS SEALED AND REQUIRES A KEY',2000);
@@ -6372,6 +6549,7 @@ function showOverlay(type,reason=''){
   foldWardenStats(type==='win'); // the warden takes notes either way
   if(dailyMode){ showDailyResult(type,reason); return; } // dailies skip ALL progression
   if(ironmanMode){ if(type==='win') ironmanAdvance(); else endIronman(reason); return; } // one life
+  if(endlessMode){ endEndless(reason); return; } // the siege only ends one way — tally and restore
   // Between-runs marker: quitting now should CONTINUE back into the merchant
   try{const _bp=getActiveProfile();if(_bp){_bp.atMerchant=true;saveProfiles();}}catch(e){}
   activePowerups=[]; updatePowerupBar(); // buffs die with the run
@@ -6701,6 +6879,8 @@ function update(dt){
     const _ms=playerStillMs(); if(_ms>_runMaxStillMs) _runMaxStillMs=_ms;
     if(P.weapons&&P.weapons.some(w=>w.type==='noisemaker')) _runCarriedNoisemaker=true;
   }
+  // Endless Siege director: waves, quickens, supply drops, camping penalty
+  if(endlessMode&&P.alive&&phase==='PLAY') endlessTick(dt);
 
   // Per-enemy: animation, stun countdown, AI
   for(const E of enemies){
@@ -7053,7 +7233,8 @@ function update(dt){
   // Status bar
   const nearDist=ne?md(P.r,P.c,ne.r,ne.c):99;
   const anyStunned=enemies.some(e=>e.alive&&e.stunned);
-  const hasMineOnPath=traps.some(t=>t.owner==='enemy'&&astar(P.r,P.c,EXIT.r,EXIT.c)?.some(([r,c])=>r===t.r&&c===t.c));
+  // (endless: skip — no exit to path toward, and the per-frame A* is pure waste there)
+  const hasMineOnPath=!endlessMode&&traps.some(t=>t.owner==='enemy'&&astar(P.r,P.c,EXIT.r,EXIT.c)?.some(([r,c])=>r===t.r&&c===t.c));
   const _danger=!anyStunned&&nearDist<=6;
   document.getElementById('sStatus').textContent=
     anyStunned?'MINOTAUR STUNNED':
@@ -7061,6 +7242,7 @@ function update(dt){
     nearDist<=6?'DANGER NEARBY':
     hasMineOnPath?'⚠ PATH MINED':
     (exitLocked&&!P.hasExitKey)?'FIND THE KEY 🗝️':
+    endlessMode?('⏳ SURVIVE — '+Math.max(0,Math.round((performance.now()-_runStartTs)/1000))+'s'):
     'FIND THE EXIT';
   const _statItem=document.getElementById('sbStatusItem');
   if(_statItem) _statItem.classList.toggle('danger',_danger); // red-tint the pill when the hunter is close
@@ -7175,6 +7357,7 @@ function drawMaze(){
 }
 
 function drawExit(){
+  if(endlessMode) return; // the siege has no exit — don't dangle a lie
   const x=tx(EXIT.c),y=ty(EXIT.r);
   const p=0.7+0.3*Math.sin(Date.now()/380);
   const distToExit=md(P.r,P.c,EXIT.r,EXIT.c);
@@ -7866,7 +8049,7 @@ function buildTitleScreen(){
       `<button id="btnStart">${hasRunSave()?'▶ CONTINUE RUN':'CONTINUE'}</button>`+
       `<button id="btnNewGame">NEW GAME</button>`+
       `<button id="btnHowTo" style="margin-top:6px;padding:7px 20px;background:transparent;border:1px solid rgba(201,168,76,.5);color:#c9a84c;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;cursor:pointer;border-radius:3px;">HOW TO PLAY</button>`+
-      dailyBtnHTML()+ironmanBtnHTML()+hunterBtnHTML()+
+      dailyBtnHTML()+ironmanBtnHTML()+endlessBtnHTML()+hunterBtnHTML()+
       `<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:center;">`+
       `<button id="btnMenuProfile" style="padding:6px 14px;background:transparent;border:1px solid rgba(255,255,255,.2);color:var(--dim);font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;cursor:pointer;border-radius:3px;">👤 PROFILES</button>`+
       `<button id="btnMenuAch" style="padding:6px 14px;background:transparent;border:1px solid rgba(255,255,255,.2);color:var(--dim);font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;cursor:pointer;border-radius:3px;">🏆 ACHIEVEMENTS</button>`+
@@ -7880,7 +8063,7 @@ function buildTitleScreen(){
       `<p style="font-size:9px;letter-spacing:2px;color:var(--dim);text-align:center;max-width:260px;line-height:1.9">You are hunted by something ancient.<br>Find the exit before it finds you.</p>`+
       `<button id="btnStart">ENTER THE LABYRINTH</button>`+
       `<button id="btnHowTo" style="margin-top:4px;padding:7px 20px;background:transparent;border:1px solid rgba(201,168,76,.5);color:#c9a84c;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;cursor:pointer;border-radius:3px;">HOW TO PLAY</button>`+
-      dailyBtnHTML()+ironmanBtnHTML()+hunterBtnHTML();
+      dailyBtnHTML()+ironmanBtnHTML()+endlessBtnHTML()+hunterBtnHTML();
   }
   wireOvButtons();
 }
@@ -8099,6 +8282,7 @@ function wireOvButtons(){
     if(id==='btnShare'){copyShareText();return;}
     if(id==='btnDaily'){startDailyRun();return;}
     if(id==='btnIronman'){startIronmanRun();return;}
+    if(id==='btnEndless'){startEndlessRun();return;}
     if(id==='btnHunter'){openHunterSelect();return;}
     if(id==='btnDailyBack'){buildTitleScreen();document.getElementById('ov').style.display='flex';return;}
 
@@ -8184,9 +8368,10 @@ function wireOvButtons(){
     // Capture BEFORE the abandon calls clear the flags: once they're down,
     // saveRunState()'s isolation gate no longer knows this world was a
     // hunter/ironman run and would happily persist it as a NORMAL run save.
-    const wasIsolated=hunterMode||ironmanMode||dailyMode;
+    const wasIsolated=hunterMode||ironmanMode||dailyMode||endlessMode;
     abandonIronman(); // quitting an Ironman life abandons it (no board post) + restores progression
     abandonHunter();  // same for a Hunter run — _hmRestore() already clears the save
+    abandonEndless(); // same for an Endless siege
     if(dailyMode){ dailyMode=false; _dailyDate=null; } // quit forfeits the daily (attempt burned at start)
     // Isolated modes can never be resumed — never leave their world on disk.
     // Normal runs: persist the current in-progress state for the CONTINUE RUN button.

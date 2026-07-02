@@ -35,8 +35,16 @@ leaderboard write in `showOverlay('win')` (`:4954`) and on the death-screen scor
 
 ---
 
-## 2. Endless / Survival (no exit, escalating siege)
-**Meta-loop impact: ★★★★ · Balance risk: medium · Effort: ~4 days · Unlock: TBD (run-count)**
+## 2. Endless / Survival (no exit, escalating siege) — ✅ SHIPPED 2026-07-02 as ENDLESS SIEGE
+**Meta-loop impact: ★★★★ · Balance risk: medium · Effort: ~4 days · Unlock: 15,000 highScore**
+
+> Shipped parameters: tier-III arena (totalRuns=10 maze bracket), first wave at 60s then
+> `max(30s, 75s − waves×5s)`, hunter cap 7, quicken tick every 30s (`moveDur ×0.94`,
+> floor 45% of spawn value, late arrivals inherit accumulated quickens), weapon drop /60s
+> and powerup drop /90s with compass-direction hints, camping >3s fast-forwards every
+> director clock 2.5× with a warning toast, score = seconds survived, own board
+> (`labyrinth_leaderboard_endless`, waves recorded). Full G15 isolation.
+> Tests: `tests/endless_test.js`.
 
 No exit exists. Score is time survived. Enemies are added over time, weapons drop one at a
 time on a 60 s timer, and every enemy accelerates as the clock runs.

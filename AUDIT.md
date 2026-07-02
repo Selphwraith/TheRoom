@@ -51,21 +51,21 @@ dynamite deletes them; the weapon was already consumed, so the player just loses
 shipped file is **`sounds/minotaur_hit.mp3`**. The loader's silent-failure design hid this.
 Every other referenced asset (32 sprites, 17 other sounds) exists. Rename either side.
 
-### B3 — Survival achievement clock assumes 60 fps
+### B3 — Survival achievement clock assumes 60 fps — ✅ FIXED (uses dt/1000)
 `labyrinth.html:4259` — `_runMoveTime += 0.016` per frame instead of `dt/1000`. On a 120 Hz
 display the MARATHON timer runs 2× fast; on a throttled 30 fps phone, half speed. Use `dt`.
 
-### B2 — Defuse progress ring ignores perk-modified time
+### B2 — Defuse progress ring ignores perk-modified time — ✅ FIXED 2026-07-02 (shared defuseNeededMs())
 `labyrinth.html:5761` — the canvas ring is drawn from `defuseTimer/DEFUSE_TIME`, while the
 actual completion uses `defuseNeeded` (Steady Hands ×0.5, Nimble Fingers ×0.85/stack,
 `:5371`). With perks, the mine defuses when the ring shows ~50%.
 
-### B8 — Stun achievements count before validity check
+### B8 — Stun achievements count before validity check — ✅ FIXED 2026-07-02 (guard moved above; also removed a null-deref)
 `labyrinth.html:4666-4670` — `stunEnemy()` runs `achProgress('stun_'+vid)` *before*
 `if(!E||!E.alive) return;`. Dead enemies (and B6's 0 ms noisemaker "stuns") inflate counters.
 Move the achievement call below the guard.
 
-### B9 — Restore can entomb the player inside a re-sealed secret door
+### B9 — Restore can entomb the player inside a re-sealed secret door — ✅ FIXED 2026-07-02 (relocate to nearest floor)
 `labyrinth.html:1383-1389` — `restoreRun()` force-seals all secret-door cells to WALL.
 Doors stay open 2.2 s and the player *can* walk through them while open; if the run was
 saved (pause / pagehide) at that moment, the restored player is inside solid wall and can
@@ -79,7 +79,7 @@ Fix: after re-sealing, if `!wk(P.r,P.c)`, relocate the player to the nearest flo
 `maxShots===Infinity` (`:4514-4522`), which is never true. Decide which is the design and fix
 the other.
 
-### B13 — Profile/leaderboard names are injected into innerHTML unsanitized
+### B13 — Profile/leaderboard names are injected into innerHTML unsanitized — ✅ FIXED 2026-07-02 (esc() at render)
 `labyrinth.html:1790-1791, 1853` — names go straight into template strings. Today this is
 only self-XSS on a local game, but the moment the planned platform login / shared leaderboard
 (see A5) lands, it becomes stored XSS. Sanitize at render.
