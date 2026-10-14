@@ -19,6 +19,7 @@ const FILES = [
   'hunter_test.js',
   'endless_test.js',
   'audit_fixes.test.js',
+  'crash_recorder.test.js',
 ];
 
 const filter = process.argv[2] || '';
