@@ -163,6 +163,11 @@ canvas{display:block}
 #pausePanel h3{margin:0 0 6px;color:var(--gold);font-size:15px;letter-spacing:4px;text-align:center;font-family:'Cinzel',serif;}
 .pauseBtn{background:rgba(201,168,76,.10);border:1px solid rgba(201,168,76,.5);color:var(--gold);font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;padding:10px 18px;border-radius:4px;cursor:pointer;}
 .pauseBtn:active{transform:scale(.96);}
+#diagOv{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.88);}
+#diagPanel{background:#14100a;border:2px solid var(--gold);border-radius:8px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:8px;width:min(94vw,560px);max-height:88vh;box-shadow:0 0 40px rgba(201,168,76,.25);}
+#diagPanel h3{margin:0;color:var(--gold);font-size:14px;letter-spacing:4px;text-align:center;font-family:'Cinzel',serif;}
+#diagText{margin:0;overflow:auto;flex:1;min-height:120px;max-height:64vh;font-size:9px;line-height:1.5;color:#d8cfa8;white-space:pre-wrap;word-break:break-word;user-select:text;-webkit-user-select:text;background:rgba(255,255,255,.04);padding:8px;border-radius:4px;}
+#diagBtns{display:flex;gap:8px;justify-content:center;}
 #pauseNote{font-size:7px;color:var(--dim);letter-spacing:2px;text-align:center;margin-top:4px;}
 #menuBtn{position:fixed;top:64px;right:10px;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.7);border:1.5px solid rgba(201,168,76,.5);color:var(--gold);display:none;align-items:center;justify-content:center;font-size:16px;cursor:pointer;z-index:42;-webkit-tap-highlight-color:transparent;}
 #menuBtn:active{transform:scale(.92);}
@@ -798,7 +803,19 @@ canvas{display:block}
     <button class="pauseBtn" id="pbContinue">CONTINUE</button>
     <button class="pauseBtn" id="pbHowTo">HOW TO PLAY</button>
     <button class="pauseBtn" id="pbQuit">QUIT TO TITLE</button>
+    <button class="pauseBtn" id="pbDiag" style="font-size:9px;opacity:.75">🐞 DIAGNOSTICS</button>
     <div id="pauseNote">YOUR RUN IS SAVED AUTOMATICALLY</div>
+  </div>
+</div>
+<div id="diagOv">
+  <div id="diagPanel">
+    <h3>🐞 DIAGNOSTICS</h3>
+    <pre id="diagText"></pre>
+    <div id="diagBtns">
+      <button class="pauseBtn" id="diagCopy">COPY</button>
+      <button class="pauseBtn" id="diagClear">CLEAR</button>
+      <button class="pauseBtn" id="diagClose">CLOSE</button>
+    </div>
   </div>
 </div>
 <div id="menuBtn">☰</div>
@@ -819,6 +836,100 @@ canvas{display:block}
 
 <script>
 'use strict';
+
+// ═══════════════════════════════════════
+// CRASH RECORDER — diagnostics only. Every function here swallows its own
+// errors: the recorder must NEVER affect gameplay. Uses `var`/function
+// declarations on purpose (it can run before the game's let/const exist).
+//   labyrinth_crashlog   — ring buffer (last 12) of errors + unclean restarts
+//   labyrinth_heartbeat  — written every ~5s while PLAYING; if the app boots
+//                          and finds p:true, the last session died mid-run.
+//                          h:true means it had been backgrounded first
+//                          (Android reclaimed it / swiped away); h:false means
+//                          it died in the foreground (a real crash or kill).
+// ═══════════════════════════════════════
+var CRASH_KEY='labyrinth_crashlog', HB_KEY='labyrinth_heartbeat', BUILD_ID='2026-10-14-crashrec';
+var _hbPlaying=false, _hbLast=0, _hbHidden=false, _crashSeen={};
+function _heapMB(){ try{ var m=performance.memory; return m?Math.round(m.usedJSHeapSize/1048576):null; }catch(e){ return null; } }
+function _crashCtx(){
+  try{
+    return {ph:phase,runs:totalRuns,tier:tier,dim:COLS+'x'+ROWS,
+      en:enemies.filter(function(e){return e.alive;}).length,
+      at:[P.r,P.c],paused:!!pauseOpen,heapMB:_heapMB()};
+  }catch(e){ return {heapMB:_heapMB()}; }
+}
+function crashLog(kind,msg,stack,extra){
+  try{
+    var key=kind+'|'+msg, now=Date.now();
+    if(_crashSeen[key]&&now-_crashSeen[key]<5000) return; // dedupe bursts
+    _crashSeen[key]=now;
+    var arr=[]; try{ arr=JSON.parse(localStorage.getItem(CRASH_KEY))||[]; }catch(e){}
+    var ent={t:now,k:kind,m:String(msg).slice(0,300),
+             s:String(stack||'').split('\n').slice(0,6).join('\n').slice(0,700),
+             c:_crashCtx(),b:BUILD_ID};
+    if(extra!==undefined) ent.x=extra;
+    arr.push(ent); if(arr.length>12) arr=arr.slice(-12);
+    localStorage.setItem(CRASH_KEY,JSON.stringify(arr));
+  }catch(e){}
+}
+function _hbWrite(playing){
+  try{ localStorage.setItem(HB_KEY,JSON.stringify({p:playing,t:Date.now(),h:_hbHidden,c:_crashCtx()})); }catch(e){}
+}
+// Called every frame from loop(): cheap unless a beat is due or phase changed.
+function hbTick(ts,playing){
+  try{
+    if(!playing){ if(_hbPlaying){ _hbPlaying=false; _hbWrite(false); } return; }
+    if(!_hbPlaying){ _hbPlaying=true; _hbLast=0; }
+    if(ts-_hbLast<5000) return;
+    _hbLast=ts; _hbWrite(true);
+  }catch(e){}
+}
+// Called once at boot, before loadProgress().
+function crashBootCheck(){
+  try{
+    var hb=JSON.parse(localStorage.getItem(HB_KEY)||'null');
+    if(hb&&hb.p){
+      crashLog('restart',hb.h
+        ? 'Restarted mid-run after being BACKGROUNDED (Android reclaimed it, or it was swiped away)'
+        : 'Restarted mid-run while in the FOREGROUND (real crash or kill)',
+        '',{lastBeatSecAgo:Math.round((Date.now()-hb.t)/1000),last:hb.c});
+      localStorage.setItem(HB_KEY,JSON.stringify({p:false,t:Date.now(),h:false,c:hb.c}));
+    }
+  }catch(e){}
+}
+// Title-screen entry point: only appears once something has been recorded.
+function diagBtnHTML(){
+  try{ var n=crashEntries().length; if(!n) return '';
+    return '<button id="btnDiag" style="margin-top:6px;padding:6px 14px;background:transparent;border:1px solid rgba(224,85,85,.55);color:#e08080;font-family:\'Cinzel\',serif;font-size:8px;letter-spacing:2px;cursor:pointer;border-radius:3px;">🐞 CRASH LOG ('+n+')</button>';
+  }catch(e){ return ''; }
+}
+function crashEntries(){ try{ return JSON.parse(localStorage.getItem(CRASH_KEY))||[]; }catch(e){ return []; } }
+function crashReportText(){
+  var arr=crashEntries(), out=['THE LABYRINTH — diagnostics','build '+BUILD_ID,'entries: '+arr.length,''];
+  for(var i=arr.length-1;i>=0;i--){
+    var e=arr[i];
+    out.push('['+new Date(e.t).toISOString()+'] '+e.k.toUpperCase()+' — '+e.m);
+    out.push('  ctx '+JSON.stringify(e.c));
+    if(e.x!==undefined) out.push('  extra '+JSON.stringify(e.x));
+    if(e.s) out.push('  '+e.s.replace(/\n/g,'\n  '));
+    out.push('');
+  }
+  if(!arr.length) out.push('(nothing recorded yet)');
+  return out.join('\n');
+}
+try{
+  window.addEventListener('error',function(ev){
+    crashLog('error',(ev&&ev.message)||'error',ev&&ev.error&&ev.error.stack,
+             ev&&ev.filename?(String(ev.filename).split('/').pop()+':'+ev.lineno):undefined);
+  });
+  window.addEventListener('unhandledrejection',function(ev){
+    var r=ev&&ev.reason; crashLog('promise',(r&&r.message)||r,r&&r.stack);
+  });
+  window.addEventListener('pagehide',function(){ _hbHidden=true; if(_hbPlaying) _hbWrite(true); });
+  document.addEventListener('visibilitychange',function(){
+    _hbHidden=(document.visibilityState==='hidden'); if(_hbPlaying) _hbWrite(true);
+  });
+}catch(e){}
 
 // ═══════════════════════════════════════
 // CONSTANTS
@@ -6661,8 +6772,10 @@ function loop(ts){
   const dt=Math.min(ts-lastT,80);lastT=ts;
   // A thrown frame must NOT kill the rAF chain — that reads as a total freeze.
   try{
-    if(phase==='PLAY'){update(dt);drawAll();}
+    if(phase==='PLAY'){update(dt);drawAll();hbTick(ts,true);}
+    else hbTick(ts,false);
   }catch(err){
+    crashLog('frame',err&&err.message,err&&err.stack); // self-deduping; never throws
     if(!loop._lastErr||ts-loop._lastErr>1000){loop._lastErr=ts;console.error('frame error:',err);}
   }
   afId=requestAnimationFrame(loop);
@@ -7847,7 +7960,7 @@ function buildTitleScreen(){
       `<button id="btnStart">${hasRunSave()?'▶ CONTINUE RUN':'CONTINUE'}</button>`+
       `<button id="btnNewGame">NEW GAME</button>`+
       `<button id="btnHowTo" style="margin-top:6px;padding:7px 20px;background:transparent;border:1px solid rgba(201,168,76,.5);color:#c9a84c;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;cursor:pointer;border-radius:3px;">HOW TO PLAY</button>`+
-      dailyBtnHTML()+ironmanBtnHTML()+endlessBtnHTML()+hunterBtnHTML()+
+      dailyBtnHTML()+ironmanBtnHTML()+endlessBtnHTML()+hunterBtnHTML()+diagBtnHTML()+
       `<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;justify-content:center;">`+
       `<button id="btnMenuProfile" style="padding:6px 14px;background:transparent;border:1px solid rgba(255,255,255,.2);color:var(--dim);font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;cursor:pointer;border-radius:3px;">👤 PROFILES</button>`+
       `<button id="btnMenuAch" style="padding:6px 14px;background:transparent;border:1px solid rgba(255,255,255,.2);color:var(--dim);font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;cursor:pointer;border-radius:3px;">🏆 ACHIEVEMENTS</button>`+
@@ -7861,7 +7974,7 @@ function buildTitleScreen(){
       `<p style="font-size:9px;letter-spacing:2px;color:var(--dim);text-align:center;max-width:260px;line-height:1.9">You are hunted by something ancient.<br>Find the exit before it finds you.</p>`+
       `<button id="btnStart">ENTER THE LABYRINTH</button>`+
       `<button id="btnHowTo" style="margin-top:4px;padding:7px 20px;background:transparent;border:1px solid rgba(201,168,76,.5);color:#c9a84c;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;cursor:pointer;border-radius:3px;">HOW TO PLAY</button>`+
-      dailyBtnHTML()+ironmanBtnHTML()+endlessBtnHTML()+hunterBtnHTML();
+      dailyBtnHTML()+ironmanBtnHTML()+endlessBtnHTML()+hunterBtnHTML()+diagBtnHTML();
   }
   wireOvButtons();
 }
@@ -8077,6 +8190,7 @@ function wireOvButtons(){
     e.preventDefault();e.stopPropagation();
     initAudio();
 
+    if(id==='btnDiag'){window._openDiag&&window._openDiag();return;}
     if(id==='btnShare'){copyShareText();return;}
     if(id==='btnDaily'){startDailyRun();return;}
     if(id==='btnIronman'){startIronmanRun();return;}
@@ -8193,12 +8307,34 @@ function wireOvButtons(){
 try{
   window.addEventListener('pagehide',()=>saveRunState(true));
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveRunState(true);});
+  crashBootCheck(); // did the last session die mid-run? record it (diagnostics only)
   resizeCanvas();buildPalette();loadSprites();loadItemIcons();
   loadProgress();
   buildTitleScreen(); // sets up CONTINUE vs NEW GAME based on save
   updateHighScoreDisplay();
   document.getElementById('scoreDisplay').textContent=goldHud();
-}catch(e){ console.error('Boot error:',e); }
+}catch(e){ crashLog('boot',e&&e.message,e&&e.stack); console.error('Boot error:',e); }
+
+// ── Diagnostics screen (pause menu + title) ──
+(function(){
+  function open(){ try{ document.getElementById('diagText').textContent=crashReportText(); document.getElementById('diagOv').style.display='flex'; }catch(e){} }
+  function close(){ try{ document.getElementById('diagOv').style.display='none'; }catch(e){} }
+  function copy(){
+    var txt=crashReportText();
+    function fallback(){
+      try{ var ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); showToast('COPIED',900); }
+      catch(e){ showToast('COPY FAILED — select the text manually',1600); }
+    }
+    try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){showToast('COPIED',900);},fallback); } else fallback(); }
+    catch(e){ fallback(); }
+  }
+  function clear(){ try{ localStorage.removeItem(CRASH_KEY); document.getElementById('diagText').textContent=crashReportText(); }catch(e){} }
+  function wire(id,fn){ var el=document.getElementById(id); if(!el) return;
+    el.addEventListener('click',fn); el.addEventListener('touchend',function(e){e.preventDefault();fn();},{passive:false}); }
+  window._openDiag=open;
+  wire('pbDiag',open); wire('diagClose',close); wire('diagCopy',copy); wire('diagClear',clear);
+})();
 // Hide title screen on load — splash buttons control what shows after dismissal
 document.getElementById('ov').style.display='none';
 </script>
